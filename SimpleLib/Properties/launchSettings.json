@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SimpleLib": {
+      "commandName": "Project",
+      "workingDirectory": "D:\\source\\repos\\SimpleLib_Cs\\WorkingDir"
+    }
+  }
+}

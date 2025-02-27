@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net9.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<Platforms>x64</Platforms>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Hexa.NET.ImGui" Version="2.2.5" />
+		<PackageReference Include="Silk.NET.Assimp" Version="2.22.0" />
+		<PackageReference Include="System.Text.Json" Version="9.0.1" />
+		<PackageReference Include="Tomlyn" Version="0.18.0" />
+		<PackageReference Include="Vortice.Direct3D12" Version="3.6.2" />
+		<PackageReference Include="Vortice.Dxc" Version="3.6.2" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\SimpleLib\SimpleLib.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="runtimes\win-x64\native\nvtt30205.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="..\..\..\..\..\external\D3D12SDKVersionPatcher\PatchEditor.bat" WorkingDirectory="$(OutDir)" />
+	</Target>
+</Project>

@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "SimpleEditor": {
+      "commandName": "Project",
+      "workingDirectory": "D:\\source\\repos\\SimpleLib_Cs\\WorkingDir",
+      "nativeDebugging": false
+    }
+  }
+}

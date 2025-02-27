@@ -1,0 +1,19 @@
+[General]
+Associated = "Content/Textures/Rocks051/Rock051_Color.jpg"
+Format = 0
+Type = 0
+GenerateMipmaps = true
+[Mipmaps]
+MinMipmapSize = 1
+MaxMipmapCount = 10
+GammaCorrect = false
+PremultipliedAlphaBlending = false
+FilterType = 0
+[Image]
+CutoutAlpha = false
+CutoutThreshold = 0.5
+CutoutDither = false
+ScaleAlphaForMipmaps = false
+FlipVertical = false
+PremultipliedAlpha = false
+ColorSpace = 0

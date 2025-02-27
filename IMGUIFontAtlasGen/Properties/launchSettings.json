@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "IMGUIFontAtlasGen": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\Loke\\Downloads\\Poppins\\Poppins-Regular.ttf D:\\source\\repos\\SimpleLib_Cs\\SimpleLib\\GUI\\sIMGUI\\Resources\\poppins 24"
+    }
+  }
+}

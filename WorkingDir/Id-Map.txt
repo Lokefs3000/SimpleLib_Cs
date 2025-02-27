@@ -1,0 +1,6 @@
+Engine id map:
+    0 - Engine/Shaders/Missing.hlsl
+    1 - Engine/Materials/Missing.material
+    2 - Engine/Textures/Loading.png
+
+im lazy refer to "SimpleLib/Files/AutoFileRegisterer.cs"

@@ -1,0 +1,5 @@
+[General]
+Associated = "Content/Meshes/cube.fbx"
+Optimize = true
+HalfPrecision = true
+EnableLODs = true
