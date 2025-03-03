@@ -1,4 +1,5 @@
-﻿using SimpleRHI;
+﻿using SimpleLib.Runtime;
+using SimpleRHI;
 
 namespace SimpleLib.Render.Components
 {
@@ -13,7 +14,9 @@ namespace SimpleLib.Render.Components
             desc.MessageLogger = LogTypes.RHI;
             desc.ValidationEnabled = true;
 #if DEBUG
-            desc.DebuggingEnabled = true;
+            desc.DebuggingEnabled = CommandArguments.GetValueOrDefault<bool>("-r-rhidebug", true);
+#else
+            desc.DebuggingEnabled = CommandArguments.GetValueOrDefault<bool>("-r-rhidebug");
 #endif
 
             RenderDevice =  SimpleRHI.D3D12.EngineFactory.Create(desc);

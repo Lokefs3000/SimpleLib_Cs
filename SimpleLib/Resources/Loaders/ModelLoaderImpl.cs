@@ -1,5 +1,6 @@
 ﻿using Schedulers;
 using SharpGen.Runtime;
+using SimpleLib.Debugging;
 using SimpleLib.Files;
 using SimpleLib.Resources.Data;
 using SimpleLib.Utility;
@@ -7,6 +8,7 @@ using SimpleRHI;
 using System.Buffers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using TerraFX.Interop.Windows;
 
 namespace SimpleLib.Resources.Loaders
 {
@@ -37,6 +39,8 @@ namespace SimpleLib.Resources.Loaders
             ReadOnlyMemory<byte> data = args.Filesystem.ReadBytes(args.Id);
             CastingUtility.Cast(data, 0u, out MeshHeader header);
 
+            args.Object.SetupBasicResources(args.RenderDevice, header.IndexStride, false);
+
             if (header.UsesLODs)
                 LoadWithLOD(args, ref header, data);
             else
@@ -47,6 +51,7 @@ namespace SimpleLib.Resources.Loaders
         {
             uint bufferOffset = (uint)Unsafe.SizeOf<MeshHeader>();
 
+            List<Mesh> meshes = new List<Mesh>();
             for (long childStack = 1; childStack > 0; childStack--)
             {
                 CastingUtility.Cast(buffer, bufferOffset, out NodeInstanceHeader node);
@@ -54,6 +59,8 @@ namespace SimpleLib.Resources.Loaders
 
                 string nodeName;
                 CastingUtility.ReadString(buffer, bufferOffset, node.NameLength, out nodeName);
+
+                bufferOffset += node.NameLength;
 
                 for (int i = 0; i < node.MeshCount; i++)
                 {
@@ -70,6 +77,7 @@ namespace SimpleLib.Resources.Loaders
                     Mesh mesh = new Mesh(arg.Object, name);
                     mesh.AddMeshForLOD(0, renderMesh);
 
+                    meshes.Add(mesh);
                     arg.Object.AddMesh(mesh);
                 }
 
@@ -95,8 +103,7 @@ namespace SimpleLib.Resources.Loaders
                     half = new Span<VertexHalf>(ptr00, (int)header.VertexCount);
                 }
 
-                foreach (KeyValuePair<int, Mesh> kvp in arg.Object.Meshes)
-                    kvp.Value.CalcBoundsForLOD(half);
+
             }
             else
             {
@@ -106,54 +113,32 @@ namespace SimpleLib.Resources.Loaders
                     full = new Span<Vertex>(ptr00, (int)header.VertexCount);
                 }
 
-                foreach (KeyValuePair<int, Mesh> kvp in arg.Object.Meshes)
-                    kvp.Value.CalcBoundsForLOD(full);
+                fixed (byte* ptr01 = indices)
+                {
+                    foreach (Mesh m in meshes)
+                    {
+                        Mesh.RenderMesh rm = m.GetMeshForLOD(0);
+                        m.SetVertices(full.Slice((int)rm.VertexOffset, (int)rm.VertexCount));
+                        if (header.IndexStride == 2)
+                            m.SetIndices(new ReadOnlySpan<ushort>((ushort*)ptr01 + rm.IndexOffset, (int)rm.IndexCount));
+                        else
+                            m.SetIndices(new ReadOnlySpan<uint>((uint*)ptr01 + rm.IndexOffset, (int)rm.IndexCount));
+                    }
+                }
             }
+
+            MemoryCounter.PrintToConsole(LogTypes.Resources);
 
             arg.Object.RecalculateBounds();
+            arg.Object.UploadMeshes(true);
 
-            IGfxBuffer? vertexBuffer = null;
-            {
-                IGfxBuffer.CreateInfo desc = new IGfxBuffer.CreateInfo()
-                {
-                    Size = (ulong)vertices.Length * header.VertexStride,
-                    Bind = GfxBindFlags.VertexBuffer,
-                    MemoryUsage = GfxMemoryUsage.Immutable,
-                    Data = (nint)vertices.GetPointerUnsafe()
-                };
-
-                vertexBuffer = arg.RenderDevice.CreateBuffer(desc);
-                if (vertexBuffer == null)
-                {
-                    LogTypes.Resources.Error("Failed to create vertex buffer for model: \"{a}\"!", arg.Id);
-                    return;
-                }
-            }
-
-            IGfxBuffer? indexBuffer = null;
-            {
-                IGfxBuffer.CreateInfo desc = new IGfxBuffer.CreateInfo()
-                {
-                    Size = (ulong)indices.Length * header.IndexStride,
-                    Bind = GfxBindFlags.IndexBuffer,
-                    MemoryUsage = GfxMemoryUsage.Immutable,
-                    Data = (nint)indices.GetPointerUnsafe()
-                };
-
-                indexBuffer = arg.RenderDevice.CreateBuffer(desc);
-                if (indexBuffer == null)
-                {
-                    LogTypes.Resources.Error("Failed to create vertex buffer for model: \"{a}\"!", arg.Id);
-                    vertexBuffer?.Dispose();
-                    return;
-                }
-            }
-
-            arg.Object.BindResources(vertexBuffer, indexBuffer, header.IndexStride == sizeof(ushort) ? GfxValueType.UInt1_Half : GfxValueType.UInt1);
+            MemoryCounter.PrintToConsole(LogTypes.Resources);
         }
 
         private unsafe void LoadWithLOD(Payload arg, ref MeshHeader header, ReadOnlyMemory<byte> buffer)
         {
+            throw new NotImplementedException();
+
             uint bufferOffset = (uint)sizeof(MeshHeader);
 
             byte lodCount;
@@ -205,7 +190,7 @@ namespace SimpleLib.Resources.Loaders
             indices = new Span<byte>(((byte*)handle.Pointer) + bufferOffset, (int)(header.IndexCount * header.IndexStride));
             bufferOffset += (uint)indices.Length;
 
-            if (header.VertexStride == sizeof(VertexHalf))
+            /*if (header.VertexStride == sizeof(VertexHalf))
             {
                 Span<VertexHalf> half;
                 fixed (byte* ptr00 = vertices)
@@ -213,8 +198,8 @@ namespace SimpleLib.Resources.Loaders
                     half = new Span<VertexHalf>(ptr00, (int)header.VertexCount);
                 }
 
-                foreach (KeyValuePair<int, Mesh> kvp in arg.Object.Meshes)
-                    kvp.Value.CalcBoundsForLOD(half);
+                //foreach (KeyValuePair<int, Mesh> kvp in arg.Object.Meshes)
+                //    kvp.Value.CalcBoundsForLOD(half);
             }
             else
             {
@@ -223,12 +208,7 @@ namespace SimpleLib.Resources.Loaders
                 {
                     full = new Span<Vertex>(ptr00, (int)header.VertexCount);
                 }
-
-                foreach (KeyValuePair<int, Mesh> kvp in arg.Object.Meshes)
-                    kvp.Value.CalcBoundsForLOD(full);
-            }
-
-            arg.Object.RecalculateBounds();
+            }*/
 
             IGfxBuffer? vertexBuffer = null;
             {
@@ -267,7 +247,7 @@ namespace SimpleLib.Resources.Loaders
                 }
             }
 
-            arg.Object.BindResources(vertexBuffer, indexBuffer, header.IndexStride == sizeof(ushort) ? GfxValueType.UInt1_Half : GfxValueType.UInt1);
+            //arg.Object.BindResources(vertexBuffer, indexBuffer, header.IndexStride == sizeof(ushort) ? GfxValueType.UInt1_Half : GfxValueType.UInt1);
         }
 
         public struct Payload

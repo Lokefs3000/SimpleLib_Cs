@@ -4,6 +4,7 @@ using SimpleRHI;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using TerraFX.Interop.Windows;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SimpleLib.GUI.sIMGUI
 {
@@ -58,7 +59,7 @@ namespace SimpleLib.GUI.sIMGUI
 
         public void PushClip(Vector4 clip)
         {
-            _clipStack.Push(clip);
+            _clipStack.Push(clip - new Vector4(0.0f, 12.0f, 0.0f, 0.0f));
             _cmdDirty = true;
         }
 
@@ -79,7 +80,7 @@ namespace SimpleLib.GUI.sIMGUI
                     last.IndexCount = (ushort)(_indices.Count - _prevIndexCount);
                 }
 
-                _commands.Add(new sIMGUIDrawCmd((ushort)_vertices.Count, (ushort)_indices.Count, 0, _clipStack.Count > 0 ? _clipStack.Peek() : null, texture));
+                _commands.Add(new sIMGUIDrawCmd((ushort)0, (ushort)_indices.Count, 0, _clipStack.Count > 0 ? _clipStack.Peek() : null, texture));
                 _prevIndexCount = (ushort)_indices.Count;
                 _activeTextureView = texture;
                 _cmdDirty = false;
@@ -137,21 +138,20 @@ namespace SimpleLib.GUI.sIMGUI
 
             _vertices.Ensure(6);
             _indices.Ensure(4);
-
             int initial = (int)_vertices.Count;
 
-            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(min.X, min.Y), new Vector2(0.0f, 0.99f), color));
-            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(min.X, max.Y), new Vector2(0.0f, 0.0f), color));
-            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(max.X, min.Y), new Vector2(1.0f, 0.99f), color));
-            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(max.X, max.Y), new Vector2(1.0f, 0.0f), color));
+            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(min.X, min.Y), new Vector2(0.0f, 2.0f), color));
+            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(min.X, max.Y), new Vector2(0.0f, 1.0f), color));
+            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(max.X, min.Y), new Vector2(1.0f, 2.0f), color));
+            _vertices.AddNoResize(new sIMGUIVertex(new Vector2(max.X, max.Y), new Vector2(1.0f, 1.0f), color));
 
+            _indices.AddNoResize((ushort)(2 + initial));
+            _indices.AddNoResize((ushort)(1 + initial));
             _indices.AddNoResize((ushort)(initial));
-            _indices.AddNoResize((ushort)(1 + initial));
-            _indices.AddNoResize((ushort)(2 + initial));
 
-            _indices.AddNoResize((ushort)(1 + initial));
-            _indices.AddNoResize((ushort)(3 + initial));
             _indices.AddNoResize((ushort)(2 + initial));
+            _indices.AddNoResize((ushort)(3 + initial));
+            _indices.AddNoResize((ushort)(1 + initial));
         }
 
         public void AddText(Vector2 pos, string text, Vector4 color)

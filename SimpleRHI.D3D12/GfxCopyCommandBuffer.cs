@@ -154,7 +154,7 @@ namespace SimpleRHI.D3D12
 
         public unsafe bool CopyCPUBuffer(IGfxCopyCommandBuffer.BufferCopyArguments arguments)
         {
-            if (_isOpen && arguments.Source != null && arguments.Destination != null)
+            if (_isOpen && (arguments.Source != null || arguments.SourceData != nint.Zero) && arguments.Destination != null)
             {
                 GfxBuffer dst = (GfxBuffer)arguments.Destination;
                 /*if (dst.CurrentState != ResourceStates.CopyDest)
@@ -163,18 +163,15 @@ namespace SimpleRHI.D3D12
                     return false;
                 }*/
 
-                if (dst.CurrentState != ResourceStates.CopyDest)
-                    _device.EnqueueTransitionForCopyQueue(this, dst, ResourceStates.CopyDest);
+                if (dst.CurrentState != ResourceStates.Common)
+                    _device.EnqueueTransitionForCopyQueue(this, dst, ResourceStates.Common);
 
                 DynamicAllocation alloc = _ringBuffer.Allocate(arguments.Length);
-
                 NativeMemory.Copy(arguments.SourceData.ToPointer(), alloc.CPUAddress.ToPointer(), (nuint)arguments.Length);
-
-                dst.TransitionIfRequired(_commandList, ResourceStates.CopyDest);
 
                 _commandList.CopyBufferRegion(
                     dst.D3D12Resource, arguments.DestinationOffset,
-                    alloc.Buffer, arguments.SourceOffset,
+                    alloc.Buffer, arguments.SourceOffset + alloc.Offset,
                     arguments.Length);
 
                 return true;
@@ -198,7 +195,6 @@ namespace SimpleRHI.D3D12
                     _device.EnqueueTransitionForCopyQueue(this, dst, ResourceStates.Common);
 
                 DynamicAllocation alloc = _ringBuffer.Allocate(arguments.Length);
-
                 NativeMemory.Copy(arguments.SourceData.ToPointer(), alloc.CPUAddress.ToPointer(), (nuint)arguments.Length);
 
                 TextureCopyLocation srcLocation = new TextureCopyLocation(alloc.Buffer, new PlacedSubresourceFootPrint()

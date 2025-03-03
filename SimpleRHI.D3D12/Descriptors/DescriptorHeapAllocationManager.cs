@@ -24,7 +24,7 @@ namespace SimpleRHI.D3D12.Descriptors
         {
             _parentHeap = parentHeap;
             _device = device;
-            _allocator = new DynamicGPUAllocator(16, size);
+            _allocator = new DynamicGPUAllocator((uint)(size >= 512 ? 64 : 8), size);
             _heap = device.D3D12Device.CreateDescriptorHeap(new DescriptorHeapDescription(type, size, shaderVisible ? DescriptorHeapFlags.ShaderVisible : DescriptorHeapFlags.None));
             _id = id;
             _descriptorSize = (ushort)device.D3D12Device.GetDescriptorHandleIncrementSize(type);
@@ -45,8 +45,7 @@ namespace SimpleRHI.D3D12.Descriptors
 
             if (offset == DynamicGPUAllocator.InvalidOffset)
                 return new DescriptorHeapAllocation(_parentHeap, CpuDescriptorHandle.Default, GpuDescriptorHandle.Default, DynamicGPUAllocator.InvalidOffset, 0, 0, ushort.MaxValue);
-
-            return new DescriptorHeapAllocation(_parentHeap, _firstCpuHandle.Offset((int)(offset * _descriptorSize)), _shaderVisible ? _firstGpuHandle : GpuDescriptorHandle.Default, offset, (ushort)rounded, _descriptorSize, _id);
+            return new DescriptorHeapAllocation(_parentHeap, new CpuDescriptorHandle(_firstCpuHandle, (int)(offset * _descriptorSize)), _shaderVisible ? _firstGpuHandle : GpuDescriptorHandle.Default, offset, (ushort)rounded, _descriptorSize, _id);
         }
 
         public void Free(ref DescriptorHeapAllocation allocation)

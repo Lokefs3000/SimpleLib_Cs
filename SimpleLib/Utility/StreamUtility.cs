@@ -3,6 +3,9 @@ using System.Runtime.InteropServices;
 
 namespace SimpleLib.Utility
 {
+    //gotta rewrite this what is going on here??
+    //why not just cast instead of allocating
+    //now this is weird
     public static class StreamUtility
     {
         public static unsafe void Deserialize<TStruct>(Stream stream, out TStruct @struct)
@@ -60,11 +63,11 @@ namespace SimpleLib.Utility
           where TGeneric : unmanaged
         {
             byte* memory = (byte*)NativeMemory.Alloc((nuint)sizeof(TGeneric));
-            Span<byte> raw = new Span<byte>(memory, sizeof(TGeneric));
+            Span<byte> raw = new Span<byte>(memory, Math.Min(sizeof(TGeneric), size));
 
             {
                 TGeneric* ptr = &@struct;
-                NativeMemory.Copy(ptr, memory, (nuint)Math.Min(raw.Length, size));
+                NativeMemory.Copy(ptr, memory, (nuint)raw.Length);
             }
 
             stream.Write(raw);

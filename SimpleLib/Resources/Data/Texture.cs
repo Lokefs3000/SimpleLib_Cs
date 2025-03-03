@@ -189,13 +189,7 @@ namespace SimpleLib.Resources.Data
             }
             else
             {
-                for (int i = 0; i < _storage.MipLevels; i++)
-                {
-                    if (_storage.ModifedPages[i])
-                    {
-                        _storage.ModifedPages[i] = false;
-                    }
-                }
+                Array.Fill(_storage.ModifedPages, false);
             }
 
             _storage.IsUploadable = finalize;

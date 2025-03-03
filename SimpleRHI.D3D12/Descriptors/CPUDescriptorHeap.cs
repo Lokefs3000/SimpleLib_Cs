@@ -1,4 +1,5 @@
 ﻿using Vortice.Direct3D12;
+using Vortice.DXGI;
 
 namespace SimpleRHI.D3D12.Descriptors
 {
@@ -14,11 +15,44 @@ namespace SimpleRHI.D3D12.Descriptors
         private DescriptorHeapType _heapType;
         private uint _heapSize;
 
+        private DescriptorHeapAllocation _nullAlloc;
+
         public CPUDescriptorHeap(GfxDevice device, DescriptorHeapType heapType, uint heapSize)
         {
             _device = device;
             _heapType = heapType;
             _heapSize = heapSize;
+
+            switch (heapType)
+            {
+                case DescriptorHeapType.RenderTargetView:
+                    _nullAlloc = Allocate(1u);
+                    device.D3D12Device.CreateRenderTargetView(null, new RenderTargetViewDescription
+                    {
+                        ViewDimension = RenderTargetViewDimension.Texture2D,
+                        Texture2D = new Texture2DRenderTargetView
+                        {
+                            MipSlice = 0u,
+                            PlaneSlice = 0u
+                        },
+                        Format = Format.R8G8B8A8_UNorm,
+                    }, _nullAlloc.GetCPUHandle());
+                    break;
+                case DescriptorHeapType.DepthStencilView:
+                    _nullAlloc = Allocate(1u);
+                    device.D3D12Device.CreateDepthStencilView(null, new DepthStencilViewDescription
+                    {
+                        ViewDimension = DepthStencilViewDimension.Texture2D,
+                        Texture2D = new Texture2DDepthStencilView
+                        {
+                            MipSlice = 0u
+                        },
+                        Format = Format.D24_UNorm_S8_UInt,
+                        Flags = DepthStencilViewFlags.None,
+                    }, _nullAlloc.GetCPUHandle());
+                    break;
+                default: GfxDevice.Logger?.Warning("Cannot create null descriptors for heap type: \"{a}\"!", heapType); break;
+            }
         }
 
         public void Dispose()
@@ -93,5 +127,7 @@ namespace SimpleRHI.D3D12.Descriptors
                 _heapPool[i].ReleaseStaleAllocations(frameIndex);
             }
         }
+
+        public CpuDescriptorHandle NullDescriptor => _nullAlloc.GetCPUHandle();
     }
 }

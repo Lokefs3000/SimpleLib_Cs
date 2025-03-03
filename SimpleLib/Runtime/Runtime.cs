@@ -1,6 +1,7 @@
 ﻿using Arch.Core;
 using Schedulers;
 using SDL3;
+using SimpleLib.Debugging;
 using SimpleLib.Files;
 using SimpleLib.GUI.sIMGUI;
 using SimpleLib.Inputs;
@@ -30,6 +31,8 @@ namespace SimpleLib.Runtime
         public Runtime(ref CreateInfo ci)
         {
             GlobalRuntimeInstance = this;
+
+            CommandArguments.Parse(ref ci.CommandArguments);
 
             Filesystem = new Filesystem(ci.RegistryFilePath);
             JobScheduler = new JobScheduler(new JobScheduler.Config());
@@ -73,8 +76,11 @@ namespace SimpleLib.Runtime
                     InputHandler.Update(@event);
                 }
 
+                InputHandler.FrameUpdate();
+
                 sIMGUI.NewFrame();
                 DoGUI();
+                RuntimeConsole.DrawToScreenViaIMGUI();
                 sIMGUI.Render();
 
                 JobScheduler.Flush();
@@ -98,6 +104,8 @@ namespace SimpleLib.Runtime
         public struct CreateInfo
         {
             public string RegistryFilePath = string.Empty;
+
+            public string[] CommandArguments = [];
 
             public CreateInfo()
             {

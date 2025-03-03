@@ -18,7 +18,7 @@ namespace SimpleLib.Systems
             {
                 if (transform.IsDirty)
                 {
-                    Vector128<float> radians = Vector128.Multiply(transform.Rotation.AsVector128Unsafe(), Vector128.CreateScalar(DegToRad));
+                    Vector128<float> radians = Vector128.DegreesToRadians(transform.Rotation.AsVector128Unsafe());
 
                     Matrix4x4 model = Matrix4x4.Identity;
 
@@ -27,7 +27,7 @@ namespace SimpleLib.Systems
                     if (transform.Position != Vector3.Zero)
                         model = Matrix4x4.Multiply(model, Matrix4x4.CreateTranslation(transform.Position));
                     if (transform.Scale != Vector3.Zero)
-                        model = Matrix4x4.Multiply(model, Matrix4x4.CreateScale(transform.Position));
+                        model = Matrix4x4.Multiply(model, Matrix4x4.CreateScale(transform.Scale));
 
                     transform.LocalMatrix = model;
                     transform.WorldMatrix = model;
@@ -38,8 +38,6 @@ namespace SimpleLib.Systems
 
         }
 
-        public static readonly IForEachJob<TransformSystem> Job = new IForEachJob<TransformSystem>() { ForEach = new TransformSystem() };
-
-        public const float DegToRad = (float)(180.0f / Math.PI);
+        public const float DegToRad = (float)(Math.PI / 180.0f);
     }
 }

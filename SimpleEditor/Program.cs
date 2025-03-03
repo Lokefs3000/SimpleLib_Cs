@@ -9,6 +9,7 @@ namespace SimpleEditor
         {
             BaseRuntime.CreateInfo ci = new BaseRuntime.CreateInfo();
             ci.RegistryFilePath = "Files.registry";
+            ci.CommandArguments = args;
 
             using (EditorRuntime runtime = new EditorRuntime(ref ci))
             {

@@ -41,13 +41,13 @@ namespace SimpleRHI.D3D12.Descriptors
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public CpuDescriptorHandle GetCPUHandle(uint offset = 0)
         {
-            return offset == 0 ? _firstCpuHandle : new CpuDescriptorHandle(_firstCpuHandle, (int)(offset * _descriptorSize));
+            return offset == 0 ? new CpuDescriptorHandle(_firstCpuHandle, 0) : new CpuDescriptorHandle(_firstCpuHandle, (int)(offset * _descriptorSize));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public GpuDescriptorHandle GetGPUHandle(uint offset = 0)
         {
-            return offset == 0 ? _firstGpuHandle : new GpuDescriptorHandle(_firstGpuHandle, (int)(offset * _descriptorSize));
+            return offset == 0 ? new GpuDescriptorHandle(_firstGpuHandle, 0) : new GpuDescriptorHandle(_firstGpuHandle, (int)(offset * _descriptorSize));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

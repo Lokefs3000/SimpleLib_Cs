@@ -39,8 +39,8 @@ Texture2D<float4> TX_PrimaryTexture : register(t0);
 SamplerState SS_Sampler : register(s0)
 {
     Filter = MinMagMipLinear;
-    AddressU = Wrap;
-    AddressV = Wrap;
+    AddressU = Clamp;
+    AddressV = Clamp;
 };
 
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL

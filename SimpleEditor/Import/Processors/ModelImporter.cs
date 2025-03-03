@@ -22,7 +22,7 @@ namespace SimpleEditor.Import.Processors
             {
                 if (Pending.Count == 0)
                 {
-                    LogTypes.Import.Warning("Image import scheduled but no arguments are available!");
+                    LogTypes.Import.Warning("Model import scheduled but no arguments are available!");
                     return;
                 }
 
@@ -30,7 +30,6 @@ namespace SimpleEditor.Import.Processors
             }
 
             TomlTable table = Toml.ToModel(args.EDR.ProjectFileSystem.ReadAssociate(args.Id));
-
             TomlTable general = (TomlTable)table["General"];
 
             using Assimp Assimp = Assimp.GetApi();
@@ -75,8 +74,8 @@ namespace SimpleEditor.Import.Processors
             using UnsafeArray<byte> vertices = new UnsafeArray<byte>((int)(header.VertexCount * (int)header.VertexStride));
             using UnsafeArray<byte> indices = new UnsafeArray<byte>((int)(header.IndexCount * (int)header.IndexStride));
 
-            ulong vertexOffset = 0;
-            ulong indexOffset = 0;
+            uint vertexOffset = 0;
+            uint indexOffset = 0;
 
             bool result = false;
             if (header.UsesLODs)
@@ -148,7 +147,7 @@ namespace SimpleEditor.Import.Processors
                 indexStride = sizeof(ushort);
         }
 
-        private unsafe bool WriteNode(Scene* scene, Node* node, Stream stream, ref ulong vertexOffset, ref ulong indexOffset, byte indexStride, byte vertexStride, UnsafeArray<byte> vertices, UnsafeArray<byte> indices)
+        private unsafe bool WriteNode(Scene* scene, Node* node, Stream stream, ref uint vertexOffset, ref uint indexOffset, byte indexStride, byte vertexStride, UnsafeArray<byte> vertices, UnsafeArray<byte> indices)
         {
             bool success = true;
 
@@ -273,7 +272,7 @@ namespace SimpleEditor.Import.Processors
             return success;
         }
 
-        private unsafe bool WriteNodeLOD(Scene* scene, Node* root, Stream stream, ref ulong vertexOffset, ref ulong indexOffset, byte indexStride, byte vertexStride, UnsafeArray<byte> vertices, UnsafeArray<byte> indices)
+        private unsafe bool WriteNodeLOD(Scene* scene, Node* root, Stream stream, ref uint vertexOffset, ref uint indexOffset, byte indexStride, byte vertexStride, UnsafeArray<byte> vertices, UnsafeArray<byte> indices)
         {
             Dictionary<byte, nint> lodMap = new Dictionary<byte, nint>();
             for (int i = 0; i < root->MNumChildren; i++)

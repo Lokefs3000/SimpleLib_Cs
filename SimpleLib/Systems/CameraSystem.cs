@@ -28,7 +28,5 @@ namespace SimpleLib.Systems
             }
 
         }
-
-        public static readonly IForEachJob<CameraSystem> Job = new IForEachJob<CameraSystem>() { ForEach = new CameraSystem() };
     }
 }

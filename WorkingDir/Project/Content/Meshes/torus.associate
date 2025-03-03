@@ -1,5 +1,5 @@
 [General]
 Associated = "Content/Meshes/torus.fbx"
 Optimize = true
-HalfPrecision = true
+HalfPrecision = false
 EnableLODs = true

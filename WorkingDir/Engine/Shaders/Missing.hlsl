@@ -27,7 +27,7 @@ PsInput VertexMain(VsInput input, uint instance : SV_InstanceID)
     StructuredBuffer<float4x4> transforms = SB_Transforms;
 
     PsInput output;
-    output.Vertex   = mul(float4(input.Position, 1.0), transforms[perModel.Model]).xyz;  //M
+    output.Vertex   = input.Position; //mul(float4(input.Position, 1.0), transforms[perModel.Model]).xyz;  //M
     output.Position = mul(float4(output.Vertex, 1.0), camera.ViewProjection);            //VP
     output.Normal   = input.Normal;
 
@@ -45,6 +45,7 @@ float4 PixelMain(PsInput input) : SV_Target0
                     floor(input.Position.y * 64.0);
     float isEven  = fmod(checker, 2.0) * 0.2 + 1.0;
 
-    return float4(float3(0.0, 0.7, 0.7) * (dir * 0.5 + 0.5) + isEven, 1.0);
+    //return float4(float3(0.0, 0.7, 0.7) * (dir * 0.5 + 0.5) + isEven, 1.0);
+    return 1.0;
 }
 #endif

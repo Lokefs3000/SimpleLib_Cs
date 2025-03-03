@@ -10,9 +10,11 @@ using SimpleLib.Objects;
 using SimpleLib.Render;
 using SimpleLib.Resources;
 using SimpleLib.Timing;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Vortice.Mathematics;
 
 namespace SimpleEditor.Runtime
@@ -76,14 +78,14 @@ namespace SimpleEditor.Runtime
 
                     Entity entity2 = scene.CreateEntity();
 
-                    entity.Set(new Transform
+                    entity2.Set(new Transform
                     {
                         IsDirty = true,
                         Position = new Vector3(0.0f, 0.0f, -3.0f),
                         Scale = Vector3.One
                     });
 
-                    entity.Set(new Camera
+                    entity2.Add(new Camera
                     {
                         FieldOfView = 70.0f,
                         NearClip = 0.01f,
@@ -107,6 +109,7 @@ namespace SimpleEditor.Runtime
                 sIMGUI.Text($"Framerate: {(int)(1.0f / FrameManager.DeltaTime)} (t:{FrameManager.FramerateTarget} e:{Math.Abs((int)(1.0f / FrameManager.DeltaTime) - FrameManager.FramerateTarget)})", Vector4.One);
                 sIMGUI.ScreenCursor = sIMGUI.ScreenCursor + new Vector2(16.0f, 0.0f);
                 sIMGUI.Text($"GC: {(GC.GetTotalMemory(false) / 1024.0 / 1024.0).ToString("G5", CultureInfo.InvariantCulture)}mb", Vector4.One);
+                sIMGUI.Text($"Memory: {(CurrentProcess.PrivateMemorySize64 / 1024.0 / 1024.0).ToString("G5", CultureInfo.InvariantCulture)}mb ({(int)Math.Round(Math.Clamp(CurrentProcess.PrivateMemorySize64 / (double)MaxSystemMemory, 0.0, 1.0) * 100.0)})", Vector4.One);
 
                 sIMGUI.Text("Memory counters:", Vector4.One);
                 foreach (var data in MemoryCounter.Counters)
@@ -144,5 +147,9 @@ namespace SimpleEditor.Runtime
                 DrawDebugTimerTree(timer.Children[i], DebugTimers.Timers[timer.Children[i]]);
             }
         }
+
+        private static Process CurrentProcess = Process.GetCurrentProcess();
+        private static long MaxSystemMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+
     }
 }

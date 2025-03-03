@@ -22,8 +22,8 @@ namespace SimpleLib.Systems
         {
             DebugTimers.StartTimer("ECSSystemHandler.Update");
 
-            //World.InlineParallelQuery(new QueryDescription().WithAll<Transform>(), TransformSystem.Job);
-            //World.InlineParallelQuery(new QueryDescription().WithAll<Transform, Camera>(), CameraSystem.Job);
+            World.InlineParallelQuery(new QueryDescription().WithAll<Transform>(), new IForEachJob<TransformSystem>() { ForEach = new TransformSystem() });
+            World.InlineParallelQuery(new QueryDescription().WithAll<Transform, Camera>(), new IForEachJob<CameraSystem>() { ForEach = new CameraSystem() });
 
             DebugTimers.StopTimer();
         }

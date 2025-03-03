@@ -20,7 +20,6 @@ namespace SimpleLib.Resources
         private Texture _loadingTexture;
 
         private IGfxPipelineStateCache _pipelineStateCache;
-
         private IShaderPackage? _shaderPackage = null;
 
         public ResourceHandler(JobScheduler scheduler, Filesystem fs, IGfxDevice renderDevice)
@@ -80,6 +79,7 @@ namespace SimpleLib.Resources
         private void InitializeFactories()
         {
             TextureFactory.Device = _renderDevice;
+            ModelFactory.Device = _renderDevice;
         }
 
         public void SetShaderPackage(IShaderPackage package)

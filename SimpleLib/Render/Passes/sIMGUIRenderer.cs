@@ -65,7 +65,7 @@ namespace SimpleLib.Render.Passes
                 Matrix4x4.CreateTranslation(new Vector3(-1.0f, 1.0f, 0.0f));
 
             commandBuffer.SetViewport(new Vector4(0.0f, 0.0f, viewport.RenderResolution.X, viewport.RenderResolution.Y));
-            commandBuffer.ClearRenderTarget(viewport.BackbufferTextureView, new Color4(0.1f, 0.4f, 0.2f));
+            //commandBuffer.ClearRenderTarget(viewport.BackbufferTextureView, new Color4(0.1f, 0.4f, 0.2f));
             commandBuffer.SetRenderTarget(viewport.BackbufferTextureView);
 
             commandBuffer.SetVertexBuffer(_vertexBufferView, stride: (uint)sizeof(sIMGUIVertex));
@@ -87,7 +87,7 @@ namespace SimpleLib.Render.Passes
                 if (prevClipRect != cmd.Clip)
                 {
                     prevClipRect = cmd.Clip ?? new Vector4(0.0f, 0.0f, viewport.RenderResolution.X, viewport.RenderResolution.Y);
-                    commandBuffer.SetScissor(new Vector4(prevClipRect.X, prevClipRect.Y, prevClipRect.Z - prevClipRect.X, prevClipRect.W - prevClipRect.Y));
+                    commandBuffer.SetScissor(new Vector4(prevClipRect.X, prevClipRect.Y, prevClipRect.Z, prevClipRect.W));
                 }
 
                 if (prevTexture != cmd.Texture)

@@ -1,5 +1,7 @@
 ﻿using SDL3;
 using SimpleLib.Timing;
+using System.Runtime.CompilerServices;
+using static SDL3.SDL3;
 
 namespace SimpleLib.Inputs
 {
@@ -7,14 +9,22 @@ namespace SimpleLib.Inputs
     {
         private Dictionary<string, InputBinding> _bindings = new Dictionary<string, InputBinding>();
 
-        private bool[] _keys = new bool[(int)KeyCode.Max];
+        private KeyState[] _keys = new KeyState[(int)KeyCode.Max];
 
-        public InputHandler()
+        private char? _lastPressedKey = null;
+        private bool _wasUpdatedThisFrame = false;
+
+        private bool _textInputEnabled = false;
+        private bool _textInputActiveState = false;
+
+        internal InputHandler()
         {
-            Array.Fill(_keys, false);
+            _instance = this;
+
+            Array.Fill(_keys, KeyState.None);
         }
 
-        public void Update(SDL_Event @event)
+        internal void Update(SDL_Event @event)
         {
             DebugTimers.StartTimer("InputHandler.Update");
 
@@ -23,13 +33,32 @@ namespace SimpleLib.Inputs
                 case SDL_EventType.KeyDown:
                     {
                         KeyCode kc = ConvertSDLKeyCode(@event.key.key);
-                        _keys[(int)kc] = true;
+                        KeyState prevState = _keys[(int)kc];
+
+                        if (!prevState.HasFlag(KeyState.Pressed))
+                            prevState |= KeyState.UpdatedThisFrame | KeyState.FrameDebounce;
+                        if (@event.key.repeat)
+                            prevState |= KeyState.Repeated | KeyState.FrameDebounce;
+
+                        _keys[(int)kc] = prevState | KeyState.Pressed;
+
                         break;
                     }
                 case SDL_EventType.KeyUp:
                     {
                         KeyCode kc = ConvertSDLKeyCode(@event.key.key);
-                        _keys[(int)kc] = false;
+                        KeyState prevState = _keys[(int)kc];
+
+                        if (!prevState.HasFlag(KeyState.Pressed))
+                            prevState |= KeyState.UpdatedThisFrame | KeyState.FrameDebounce;
+
+                        _keys[(int)kc] = prevState & ~KeyState.Pressed;
+                        break;
+                    }
+                case SDL_EventType.TextInput:
+                    {
+                        _lastPressedKey = @event.text.GetText()?.First();
+                        _wasUpdatedThisFrame = true;
                         break;
                     }
                 default: break;
@@ -37,8 +66,8 @@ namespace SimpleLib.Inputs
 
             foreach (KeyValuePair<string, InputBinding> binding in _bindings)
             {
-                bool positive = _keys[(int)binding.Value.Positive];
-                bool negative = _keys[(int)binding.Value.Negative];
+                bool positive = _keys[(int)binding.Value.Positive].HasFlag(KeyState.Pressed);
+                bool negative = _keys[(int)binding.Value.Negative].HasFlag(KeyState.Pressed);
 
                 InputBinding b = binding.Value;
 
@@ -51,6 +80,34 @@ namespace SimpleLib.Inputs
             }
 
             DebugTimers.StopTimer();
+        }
+
+        internal void FrameUpdate()
+        {
+            if (!_wasUpdatedThisFrame)
+            {
+                _lastPressedKey = null;
+            }
+
+            _wasUpdatedThisFrame = false;
+
+            if (_textInputEnabled != _textInputActiveState)
+            {
+                if (_textInputEnabled)
+                    _textInputActiveState = SDL_StartTextInput(SDL_GetKeyboardFocus());
+                else
+                    _textInputActiveState = SDL_StartTextInput(SDL_GetKeyboardFocus());
+            }
+
+            for (int i = 0; i < _keys.Length; i++)
+            {
+                KeyState state = _keys[i];
+                if (!state.HasFlag(KeyState.FrameDebounce))
+                    _keys[i] = state & ~(KeyState.Repeated | KeyState.UpdatedThisFrame);
+                else
+                    _keys[i] = state & ~KeyState.FrameDebounce;
+            }
+
         }
 
         private KeyCode ConvertSDLKeyCode(SDL_Keycode kc)
@@ -105,9 +162,30 @@ namespace SimpleLib.Inputs
                 case SDL_Keycode._7: return KeyCode.Seven;
                 case SDL_Keycode._8: return KeyCode.Eight;
                 case SDL_Keycode._9: return KeyCode.Nine;
+                case SDL_Keycode.Up: return KeyCode.Up;
+                case SDL_Keycode.Left: return KeyCode.Left;
+                case SDL_Keycode.Right: return KeyCode.Right;
+                case SDL_Keycode.Down: return KeyCode.Down;
+                case SDL_Keycode.Backspace: return KeyCode.Backspace;
+                case SDL_Keycode.Return: return KeyCode.Return;
+                case SDL_Keycode.Escape: return KeyCode.Escape;
+                case SDL_Keycode.Tab: return KeyCode.Tab;
+                case SDL_Keycode.Capslock: return KeyCode.CapsLock;
+                case SDL_Keycode.LeftShift: return KeyCode.LeftShift;
+                case SDL_Keycode.LeftControl: return KeyCode.LeftControl;
+                case SDL_Keycode.LeftAlt: return KeyCode.LeftAlt;
+                case SDL_Keycode.RightShift: return KeyCode.RightShift;
+                case SDL_Keycode.RightControl: return KeyCode.RightControl;
+                case SDL_Keycode.RightAlt: return KeyCode.RightAlt;
+                case SDL_Keycode.Insert: return KeyCode.Insert;
+                case SDL_Keycode.Home: return KeyCode.Home;
+                case SDL_Keycode.PageUp: return KeyCode.PageUp;
+                case SDL_Keycode.Delete: return KeyCode.Delete;
+                case SDL_Keycode.End: return KeyCode.End;
+                case SDL_Keycode.PageDown: return KeyCode.PageDown;
             }
 
-            return KeyCode.Unkown;
+            return KeyCode.Unknown;
         }
 
         public void AddBinding(string name, InputBinding binding)
@@ -123,6 +201,27 @@ namespace SimpleLib.Inputs
         public void RemoveBinding(string name)
         {
             _bindings.Remove(name);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static bool IsKeyDown(KeyCode code) => _instance._keys[(int)code].HasFlag(KeyState.Pressed);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static bool IsKeyUp(KeyCode code) => !_instance._keys[(int)code].HasFlag(KeyState.Pressed);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static bool IsKeyRepeated(KeyCode code) => _instance._keys[(int)code].HasFlag(KeyState.Repeated);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static bool IsKeyPressed(KeyCode code) => IsKeyDown(code) && _instance._keys[(int)code].HasFlag(KeyState.UpdatedThisFrame);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static bool IsKeyReleased(KeyCode code) => IsKeyUp(code) && _instance._keys[(int)code].HasFlag(KeyState.UpdatedThisFrame);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static bool IsKeyRepeatedOrPressed(KeyCode code) => IsKeyRepeated(code) || IsKeyPressed(code);
+
+        public static char? CharTextInput => _instance?._lastPressedKey;
+        public static bool NeedsTextInputNextFrame { get => _instance._textInputEnabled; set { _instance._textInputEnabled = value; } }
+
+        private static InputHandler? _instance;
+
+        private enum KeyState : byte
+        {
+            None = 0,
+            Pressed = 1 << 0,
+            UpdatedThisFrame = 1 << 1,
+            Repeated = 1 << 2,
+            FrameDebounce = 1 << 3,
         }
     }
 }

@@ -104,6 +104,8 @@ namespace SimpleLib.GUI.sIMGUI
             _screenCursor = position;
             _screenMinimum = position;
             _screenMaximum = position + size;
+
+            _drawList.PushClip(new Vector4(_screenMinimum.X, _screenMinimum.Y, _screenMaximum.X, _screenMaximum.Y));
         }
 
         public void PopArea()
@@ -111,6 +113,7 @@ namespace SimpleLib.GUI.sIMGUI
             if (_areaStack.Count > 0)
             {
                 SavedAreaState area = _areaStack.Pop();
+                _drawList.PopClip();
 
                 _screenCursor = area.ScreenCursor;
                 _screenMinimum = area.ScreenMinimum;
@@ -142,11 +145,12 @@ namespace SimpleLib.GUI.sIMGUI
             }
         }
 
-        public Vector2 CalcTextSize(string text)
+        public Vector2 CalcTextSize(string text, int limit = int.MaxValue)
         {
-            Vector2 size = new Vector2(0.0f, 24.0f);
+            Vector2 size = new Vector2(0.0f, 24.0f * 0.5f);
 
-            for (int i = 0; i < text.Length - 1; i++)
+            limit = Math.Min(text.Length, limit);
+            for (int i = 0; i < limit; i++)
             {
                 if (_globalFont.TryGetGlyph((byte)text[i], out GuiGlyph glyph))
                 {

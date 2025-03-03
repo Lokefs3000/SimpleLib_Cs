@@ -8,6 +8,7 @@ struct PerModelData
 struct CameraBufferData
 {
     float3 ViewPosition;
+    float ___padding0;
     float4x4 ViewProjection;
 };
 

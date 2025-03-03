@@ -52,7 +52,7 @@ namespace SimpleLib.GUI.sIMGUI
         }
 
         //Measurements
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector2 CalcTextSize(string text) => _context.CalcTextSize(text);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Vector2 CalcTextSize(string text, int limit = int.MaxValue) => _context.CalcTextSize(text, limit);
 
         //Accesors
         public static Vector2 ScreenCursor { get => Context.ScreenCursor; set { Context.ScreenCursor = value; } }

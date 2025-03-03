@@ -6,7 +6,7 @@ namespace SimpleRHI.D3D12.Descriptors
     //Segregated fit
     internal class DynamicGPUAllocator
     {
-        private List<Queue<ulong>> _allocations = new List<Queue<ulong>>();
+        private List<Queue<BlockAllocInfo>> _allocations = new List<Queue<BlockAllocInfo>>();
         private uint _maxSize;
 
         private ulong _freeSize = 0;
@@ -30,13 +30,13 @@ namespace SimpleRHI.D3D12.Descriptors
                 currentSize = (int)BitOperations.RoundUpToPowerOf2((uint)currentSize);
                 currentSize++;
 
-                _allocations.Add(new Queue<ulong>());
+                _allocations.Add(new Queue<BlockAllocInfo>());
             }
 
-            Queue<ulong> largest = _allocations[_allocations.Count - 1];
+            Queue<BlockAllocInfo> largest = _allocations[_allocations.Count - 1];
             for (ulong i = 0; i < blockSize / maxSize; i++)
             {
-                largest.Enqueue(maxSize);
+                largest.Enqueue(new BlockAllocInfo { Size = maxSize, Offset = i * maxSize });
             }
         }
 
@@ -61,10 +61,11 @@ namespace SimpleRHI.D3D12.Descriptors
                 return InvalidOffset;
             }
 
-            Queue<ulong> free = _allocations[index];
-            if (free.TryDequeue(out ulong r))
+            Queue<BlockAllocInfo> free = _allocations[index];
+            if (free.TryDequeue(out BlockAllocInfo r))
             {
-                return r;
+                _freeSize -= size;
+                return r.Offset;
             }
 
             if (!SplitLargerBlock(index))
@@ -74,7 +75,7 @@ namespace SimpleRHI.D3D12.Descriptors
             }
 
             _freeSize -= size;
-            return free.Dequeue();
+            return free.Dequeue().Offset;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -102,7 +103,7 @@ namespace SimpleRHI.D3D12.Descriptors
                 _freeSize += info.Size;
 
                 int index = 63 - BitOperations.LeadingZeroCount(info.Size);
-                _allocations[index].Enqueue(info.Offset);
+                _allocations[index].Enqueue(new BlockAllocInfo { Size = info.Size, Offset = info.Offset });
             }
         }
 
@@ -114,7 +115,7 @@ namespace SimpleRHI.D3D12.Descriptors
                 return false;
             }
 
-            Queue<ulong> free = _allocations[index + 1];
+            Queue<BlockAllocInfo> free = _allocations[index + 1];
             
             if (free.Count == 0)
             {
@@ -124,12 +125,12 @@ namespace SimpleRHI.D3D12.Descriptors
                 }
             }
 
-            if (free.TryDequeue(out ulong r))
+            if (free.TryDequeue(out BlockAllocInfo r))
             {
-                r /= 2;
+                r.Size /= 2;
 
-                Queue<ulong> min = _allocations[index];
-                min.Enqueue(r);
+                Queue<BlockAllocInfo> min = _allocations[index];
+                min.Enqueue(r); r.Offset += r.Size;
                 min.Enqueue(r);
 
                 return true;
@@ -147,6 +148,12 @@ namespace SimpleRHI.D3D12.Descriptors
             public ulong Offset;
             public ulong Size;
             public ulong Frame;
+        }
+
+        private struct BlockAllocInfo
+        {
+            public ulong Size;
+            public ulong Offset;
         }
     }
 }

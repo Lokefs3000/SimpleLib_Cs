@@ -2,7 +2,7 @@
 {
     public enum KeyCode : ushort
     {
-        Unkown = 0,
+        Unknown = 0,
 
         A = 1,
         B = 2,
@@ -60,6 +60,27 @@
         Right = 51,
         Down = 52,
 
-        Max = Down,
+        Backspace = 53,
+        Return = 54,
+        Escape = 55,
+        Tab = 56,
+        CapsLock = 57,
+        
+        LeftShift = 58,
+        LeftControl = 59,
+        LeftAlt = 60,
+
+        RightShift = 61,
+        RightControl = 62,
+        RightAlt = 63,
+
+        Insert = 64,
+        Home = 65,
+        PageUp = 66,
+        Delete = 67,
+        End = 68,
+        PageDown = 69,
+
+        Max = PageDown,
     }
 }

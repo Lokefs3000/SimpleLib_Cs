@@ -29,6 +29,7 @@ namespace SimpleLib.Render
         private RenderPassData _screenPassData;
 
         private ViewportRenderData _viewportRenderData;
+        private CameraRenderData _cameraRenderData;
 
         private World _world;
 
@@ -51,8 +52,10 @@ namespace SimpleLib.Render
             _screenPassData = new RenderPassData();
 
             _viewportRenderData = new ViewportRenderData();
+            _cameraRenderData = new CameraRenderData();
 
             _cameraPassData.Set(_viewportRenderData);
+            _cameraPassData.Set(_cameraRenderData);
             _screenPassData.Set(_viewportRenderData);
 
             _world = world;
@@ -90,14 +93,22 @@ namespace SimpleLib.Render
             DebugTimers.StartTimer("RenderEngine.Render");
 
             DebugTimers.StartTimer("RenderBuilder.Build");
-            _world.InlineQuery(new QueryDescription().WithAll<Camera>(), ref _renderBuilderCamera);
+            _world.InlineQuery(new QueryDescription().WithAll<Transform, Camera>(), ref _renderBuilderCamera);
             _world.InlineQuery(new QueryDescription().WithAll<Transform, MeshRenderer>(), ref _renderBuilder);
             DebugTimers.StopTimer();
 
             RenderBuilder.Compile();
 
+            SetupCameraPassData();
+
             CameraRenderPassContainer.BuildGraph();
-            CameraRenderPassContainer.ExecuteGraph(this, _cameraPassData);
+            for (int i = 0; i < RenderBuilder.Viewpoints.Count; i++)
+            {
+                _cameraRenderData.RenderCamera = RenderBuilder.Viewpoints[i].Viewpoint;
+                _cameraRenderData.RenderTransform = RenderBuilder.Viewpoints[i].Transform;
+
+                CameraRenderPassContainer.ExecuteGraph(this, _cameraPassData);
+            }
 
             RenderBuilder.Reset();
 
@@ -114,6 +125,15 @@ namespace SimpleLib.Render
             DebugTimers.StartTimer("IGfxDevice.WaitForFrames");
             DeviceManager.RenderDevice.WaitForFrames();
             DebugTimers.StopTimer();
+        }
+
+        private void SetupCameraPassData()
+        {
+            IGfxSwapChain swapChain = SwapChainHandler.GetSwapChain(SwapChainHandler.PrimaryWindowId)
+                ?? throw new Exception();
+
+            _viewportRenderData.RenderResolution = new Vector2(swapChain.Desc.Width, swapChain.Desc.Height);
+            _viewportRenderData.BackbufferTextureView = swapChain.RenderTargetView;
         }
 
         private void SetupScreenPassData()
@@ -138,8 +158,8 @@ namespace SimpleLib.Render
 
             public void Update(Entity entity)
             {
-                Transform transform = entity.TryGetRef<Transform>(out bool t);
-                MeshRenderer meshRenderer = entity.TryGetRef<MeshRenderer>(out bool mr);
+                ref Transform transform = ref entity.TryGetRef<Transform>(out bool t);
+                ref MeshRenderer meshRenderer = ref entity.TryGetRef<MeshRenderer>(out bool mr);
 
                 if (t && mr && meshRenderer.Mesh != null)
                 {
@@ -168,17 +188,18 @@ namespace SimpleLib.Render
 
             public void Update(Entity entity)
             {
-                Camera camera = entity.TryGetRef<Camera>(out bool c);
+                ref Transform transform = ref entity.TryGetRef<Transform>(out bool t);
+                ref Camera camera = ref entity.TryGetRef<Camera>(out bool c);
 
-                if (c)
+                if (t && c)
                 {
                     IGfxSwapChain swapChain = _swapChainHandler.GetSwapChain(_swapChainHandler.PrimaryWindowId);
                     IGfxTextureView view = swapChain.RenderTargetView;
 
                     _builder.Viewpoints.Add(new RenderBuilder.RenderPoints
                     {
-                        View = camera.ViewMatrix,
-                        Projection = Matrix4x4.CreatePerspectiveFieldOfView(camera.FieldOfView * TransformSystem.DegToRad, swapChain.Desc.Width / (float)swapChain.Desc.Height, camera.NearClip, camera.FarClip),
+                        Transform = transform,
+                        Viewpoint = camera,
                         RenderTarget = view,
                     });
                 }

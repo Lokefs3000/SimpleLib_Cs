@@ -146,6 +146,30 @@ namespace SimpleRHI.D3D12
             _device.GPUDescriptors_CBV_SRV_UAV.DestroySuballocator(_descriptorSuballocator);
         }
 
+        private void ResetAllBindings()
+        {
+            for (int i = 0; i < _rtv.Length; i++)
+            {
+                _rtv[i].Value = null;
+                _viewports[i].Value = null;
+                _scissors[i].Value = null;
+            }
+
+            for (int i = 0; i < 16; i++)
+            {
+                _vertexBuffer[i].Value = null;
+                _srv[i].Value = null;
+                _uav[i].Value = null;
+                _cbv[i].Value = null;
+                unsafe { _constants[i].Value = null; }
+            }
+
+            _dsv.Value = null;
+            _indexBuffer.Value = null;
+            _pipelineState.Value = null;
+            _primitiveTopology.Value = null;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Begin()
         {
@@ -160,6 +184,7 @@ namespace SimpleRHI.D3D12
             _commandAllocator.Reset();
             _commandList.Reset(_commandAllocator);
 
+            _commandList.ClearState(null);
             _commandList.SetDescriptorHeaps(_device.GPUDescriptors_CBV_SRV_UAV.D3D12DescriptorHeap);
         }
 
@@ -188,6 +213,10 @@ namespace SimpleRHI.D3D12
 
             _cachedAlloc?.Free();
             _cachedAlloc = null;
+
+            _unresolvedResources.Clear();
+
+            ResetAllBindings();
 
             try
             {
@@ -633,7 +662,7 @@ namespace SimpleRHI.D3D12
                 ref DirtyHandle<DescriptorHeapAllocation> rtv = ref rtvs[i];
                 if (rtv.Dirty)
                 {
-                    _rtvDescriptors[i] = rtv.Value.HasValue ? rtv.Value.Value.GetCPUHandle() : CpuDescriptorHandle.Default;
+                    _rtvDescriptors[i] = rtv.Value.HasValue ? rtv.Value.Value.GetCPUHandle() : _device.CPUDescriptors_RTV.NullDescriptor;
 
                     rtv.Reset();
 
@@ -650,7 +679,7 @@ namespace SimpleRHI.D3D12
             {
                 _commandList.OMSetRenderTargets(
                     new ReadOnlySpan<CpuDescriptorHandle>(_rtvDescriptors, 0, rtvCount + 1),
-                    _dsv.Value.HasValue ? _dsv.Value.Value.GetCPUHandle() : null);
+                    _dsv.Value.HasValue ? _dsv.Value.Value.GetCPUHandle() : _device.CPUDescriptors_DSV.NullDescriptor);
             }
 
             Span<DirtyHandle<Vector4>> viewports = _viewports.AsSpan();
@@ -838,7 +867,7 @@ namespace SimpleRHI.D3D12
                                 ref DirtyHandleClass<BindablePipelineResource> data = ref _cbv[param.Slot];
                                 if (data.Dirty && data.Value != null)
                                 {
-                                    _commandList.SetGraphicsRootConstantBufferView(param.Offset, data.Value.GetLocation());
+                                    _commandList.SetGraphicsRootConstantBufferView(param.Offset, ((GfxBufferView)data.Value).Buffer.GPUVirtualAddress);
                                     data.Reset();
                                 }
                                 break;
@@ -888,6 +917,9 @@ namespace SimpleRHI.D3D12
                     resource.SetIndiceAtIndex(_id, _allocationIndices[kvp.Key]);
                     cpu.Offset(dynamicHeap.DescriptorSize);
                 }
+
+                _cachedAlloc?.Free();
+                _cachedAlloc = dynamicHeap;
             }
 
             fixed (uint* ptr = _allocationIndices)

@@ -22,8 +22,8 @@ namespace SimpleRHI.D3D12.Descriptors
         {
             if (_suballocations.Count == 0 || _currentSuballocationOffset + size > _suballocations[_suballocations.Count - 1].NumDescriptors)
             {
-                ulong suballocationSize = Math.Max(_dynamicChunkSize, size);
-                DescriptorHeapAllocation newAllocation = _parentHeap.Allocate(size);
+                uint suballocationSize = Math.Max(_dynamicChunkSize, size);
+                DescriptorHeapAllocation newAllocation = _parentHeap.Allocate(suballocationSize);
 
                 _suballocations.Add(newAllocation);
                 _currentSuballocationOffset = 0;
@@ -35,6 +35,7 @@ namespace SimpleRHI.D3D12.Descriptors
             ushort managerId = suballocation.ManagerId;
             DescriptorHeapAllocation allocation = new DescriptorHeapAllocation(this, suballocation.GetCPUHandle(_currentSuballocationOffset), suballocation.GetGPUHandle(_currentSuballocationOffset), 0, (ushort)size, suballocation.DescriptorSize, managerId);
 
+            _currentSuballocationOffset += size;
             return allocation;
         }
 

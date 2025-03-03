@@ -96,7 +96,7 @@ namespace SimpleLib.Render.Components
         {
             public int Compare(RenderFlag x, RenderFlag y)
             {
-                return (int)(x.MeshObject.ParentModel.Id - y.MeshObject.ParentModel.Id);
+                return (int)(x.MeshObject.OwningModel.Id - y.MeshObject.OwningModel.Id);
             }
 
             public static MeshComparer Comparer = new MeshComparer();
@@ -125,9 +125,8 @@ namespace SimpleLib.Render.Components
 
         public struct RenderPoints
         {
-            public Matrix4x4 View;
-            public Matrix4x4 Projection;
-
+            public Transform Transform;
+            public Camera Viewpoint;
             public IGfxTextureView RenderTarget;
         }
     }
