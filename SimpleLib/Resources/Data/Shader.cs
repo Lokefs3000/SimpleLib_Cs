@@ -56,7 +56,7 @@ namespace SimpleLib.Resources.Data
 
             InitializeCreateInfoResources(ref desc, reflection.VariantData[variant]);
 
-            desc.Blend = reflection.BlendDescriptions.ToArray();
+            desc.Blend = (reflection.BlendDescriptions.Count == 0) ? [new IGfxGraphicsPipeline.CreateInfo.RenderTargetBlendDesc()] : reflection.BlendDescriptions.ToArray();
             desc.Rasterizer = new IGfxGraphicsPipeline.CreateInfo.RasterizerDesc();
             desc.DepthStencil = new IGfxGraphicsPipeline.CreateInfo.DepthStencilDesc();
             desc.InputLayout = reflection.VariantData[variant].InputElements.ToArray();

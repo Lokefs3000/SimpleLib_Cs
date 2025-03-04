@@ -1,19 +1,19 @@
 ﻿using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace SimpleRHI.D3D12.Descriptors
+namespace SimpleRHI.D3D12.Allocators
 {
     //Segregated fit
-    internal class DynamicGPUAllocator
+    internal class DynamicGPUAllocator : IAllocator
     {
         private List<Queue<BlockAllocInfo>> _allocations = new List<Queue<BlockAllocInfo>>();
         private uint _maxSize;
 
-        private ulong _freeSize = 0;
+        private uint _freeSize = 0;
 
         private Queue<StaleAllocInfo> _stale = new Queue<StaleAllocInfo>();
 
-        public DynamicGPUAllocator(uint maxSize, ulong blockSize)
+        public DynamicGPUAllocator(uint maxSize, uint blockSize)
         {
             if (!BitOperations.IsPow2(maxSize))
                 throw new ArgumentException("Max size needs to be a power of 2!", "maxSize");
@@ -34,10 +34,15 @@ namespace SimpleRHI.D3D12.Descriptors
             }
 
             Queue<BlockAllocInfo> largest = _allocations[_allocations.Count - 1];
-            for (ulong i = 0; i < blockSize / maxSize; i++)
+            for (uint i = 0; i < blockSize / maxSize; i++)
             {
                 largest.Enqueue(new BlockAllocInfo { Size = maxSize, Offset = i * maxSize });
             }
+        }
+
+        public void Dispose()
+        {
+
         }
 
         //ABSOLUTE SKETCHY BIT MANIPULATION
@@ -45,20 +50,21 @@ namespace SimpleRHI.D3D12.Descriptors
         //Whatever tricks we can do to optimize this call we do!
         //Hence the use of "MethodImpl()".
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ulong Allocate(uint size)
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public uint Allocate(uint size)
         {
 #if DEBUG
-            if (!BitOperations.IsPow2(size))
-                throw new ArgumentException("Cannot allocate block that is not a power of 2!", "size");
+            //if (!BitOperations.IsPow2(size))
+            //    throw new ArgumentException("Cannot allocate block that is not a power of 2!", "size");
 #endif
 
+            size = BitOperations.RoundUpToPowerOf2(size);
             int index = 31 - BitOperations.LeadingZeroCount(size);
 
             if (_freeSize < size)
             {
                 _freeSize -= size;
-                return InvalidOffset;
+                return IAllocator.Invalid;
             }
 
             Queue<BlockAllocInfo> free = _allocations[index];
@@ -71,7 +77,7 @@ namespace SimpleRHI.D3D12.Descriptors
             if (!SplitLargerBlock(index))
             {
                 GfxDevice.Logger?.Error("No available space within \"DynamicGPUAllocator\"!");
-                return InvalidOffset;
+                return IAllocator.Invalid;
             }
 
             _freeSize -= size;
@@ -79,12 +85,13 @@ namespace SimpleRHI.D3D12.Descriptors
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Free(ulong offset, uint size, ulong frame)
+        public void Free(uint size, uint offset, ulong frame)
         {
 #if DEBUG
-            if (!BitOperations.IsPow2(size))
-                throw new ArgumentException("Cannot free block that is not a power of 2!", "size");
+            //if (!BitOperations.IsPow2(size))
+            //    throw new ArgumentException("Cannot free block that is not a power of 2!", "size");
 #endif
+            size = BitOperations.RoundUpToPowerOf2(size);
 
             _stale.Enqueue(new StaleAllocInfo
             {
@@ -102,12 +109,12 @@ namespace SimpleRHI.D3D12.Descriptors
 
                 _freeSize += info.Size;
 
-                int index = 63 - BitOperations.LeadingZeroCount(info.Size);
+                int index = 31 - BitOperations.LeadingZeroCount(info.Size);
                 _allocations[index].Enqueue(new BlockAllocInfo { Size = info.Size, Offset = info.Offset });
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool SplitLargerBlock(int index)
         {
             if (index + 1 == _allocations.Count)
@@ -139,21 +146,19 @@ namespace SimpleRHI.D3D12.Descriptors
             return false;
         }
 
-        public ulong FreeSize => _freeSize;
-
-        public const ulong InvalidOffset = ulong.MaxValue;
+        public uint FreeSpace => _freeSize;
 
         private struct StaleAllocInfo
         {
-            public ulong Offset;
-            public ulong Size;
+            public uint Offset;
+            public uint Size;
             public ulong Frame;
         }
 
         private struct BlockAllocInfo
         {
-            public ulong Size;
-            public ulong Offset;
+            public uint Size;
+            public uint Offset;
         }
     }
 }

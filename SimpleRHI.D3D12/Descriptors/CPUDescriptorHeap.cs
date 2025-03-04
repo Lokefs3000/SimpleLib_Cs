@@ -75,7 +75,7 @@ namespace SimpleRHI.D3D12.Descriptors
                 {
                     allocation = _heapPool[i].Allocate(size);
 
-                    if (_heapPool[i].FreeSize == 0)
+                    if (_heapPool[i].FreeSpace == 0)
                     {
                         _removable.Enqueue(i);
                     }

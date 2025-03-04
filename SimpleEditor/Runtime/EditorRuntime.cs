@@ -60,28 +60,42 @@ namespace SimpleEditor.Runtime
                 Scene scene = SceneManager.LoadScene(null);
 
                 {
-                    Entity entity = scene.CreateEntity();
+                    int gw = 8;
+                    int gh = 8;
+                    int gd = 8;
 
-                    entity.Set(new Transform
+                    for (int z = 0; z < gd; z++)
                     {
-                        IsDirty = true,
-                        Position = new Vector3(0.0f, 0.0f, 0.0f),
-                        Rotation = new Vector3(45.0f),
-                        Scale = Vector3.One
-                    });
+                        for (int y = 0; y < gh; y++)
+                        {
+                            for (int x = 0; x < gw; x++)
+                            {
+                                Entity entity = scene.CreateEntity();
 
-                    entity.Add(new MeshRenderer
-                    {
-                        Mesh = ResourceHandler.LoadModel(Filesystem.Registry.GetIdForFile("Content/Meshes/cube.fbx"), true).GetMesh("Cube"),
-                        Material = null
-                    });
+                                entity.Set(new Transform
+                                {
+                                    IsDirty = true,
+                                    Position = new Vector3((x - gw * 0.5f) * 3.0f, y * 3.0f, z * 3.0f),
+                                    //Rotation = new Vector3(45.0f),
+                                    Scale = Vector3.One * 0.5f
+                                });
+
+                                entity.Add(new MeshRenderer
+                                {
+                                    Mesh = ResourceHandler.LoadModel(Filesystem.Registry.GetIdForFile("Content/Meshes/cube.fbx"), true).GetMesh("Cube"),
+                                    Material = null
+                                });
+                            }
+                        }
+                    }
 
                     Entity entity2 = scene.CreateEntity();
 
                     entity2.Set(new Transform
                     {
                         IsDirty = true,
-                        Position = new Vector3(0.0f, 0.0f, -3.0f),
+                        Position = new Vector3(0.0f, 8.0f, -10.0f),
+                        Rotation = new Vector3(20.0f, 0.0f, 0.0f),
                         Scale = Vector3.One
                     });
 

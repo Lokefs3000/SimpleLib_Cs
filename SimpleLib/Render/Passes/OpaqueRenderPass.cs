@@ -17,6 +17,7 @@ namespace SimpleLib.Render.Passes
     public class OpaqueRenderPass : IRenderPass
     {
         private IGfxBuffer? _instancedTransformBuffer = null;
+        private IGfxBufferView? _instancedTransformBufferView = null;
         private int _instancedTransformBufferLength = 0;
 
         private IGfxBuffer? _constantPerModelBuffer = null;
@@ -48,6 +49,11 @@ namespace SimpleLib.Render.Passes
         public void Dispose()
         {
             _cameraDataBuffer.Dispose();
+            _cameraDataBufferView.Dispose();
+
+            _instancedTransformBufferView?.Dispose();
+            _constantPerModelBufferView?.Dispose();
+            _structuredPerModelBufferView?.Dispose();
 
             _instancedTransformBuffer?.Dispose();
             _constantPerModelBuffer?.Dispose();
@@ -66,6 +72,7 @@ namespace SimpleLib.Render.Passes
                 UploadMiscBuffers(data, context);
 
                 context.SetConstantBuffer(_cameraDataBufferView, 6);
+                context.SetShaderResource(GfxShaderType.Vertex, _instancedTransformBufferView, 7);
 
                 for (int i = 0; i < engine.RenderBuilder.Batches.Count; i++)
                 {
@@ -97,7 +104,7 @@ namespace SimpleLib.Render.Passes
             }
 
             RenderBuilder.RenderFlag flag = builder.Flags[batch.First];
-            RenderBuilder.PerModelData data = builder.PerModel[batch.First];
+            RenderBuilder.PerModelData data = builder.PerModel[(uint)batch.First];
 
             if (flag.Material.Shader == null)
             {
@@ -106,8 +113,8 @@ namespace SimpleLib.Render.Passes
 
             unsafe
             {
-                nint mapped = context.Map(_constantPerModelBuffer, GfxMapType.Write, GfxMapFlags.Discard);
-                NativeMemory.Copy(mapped.ToPointer(), &data, 4u);
+                Span<RenderBuilder.PerModelData> mapped = context.Map<RenderBuilder.PerModelData>(_constantPerModelBuffer, GfxMapType.Write, GfxMapFlags.Discard);
+                mapped[0] = data;
                 context.Unmap(_constantPerModelBuffer);
             }
 
@@ -121,7 +128,7 @@ namespace SimpleLib.Render.Passes
 
             context.SetConstantBuffer(_constantPerModelBufferView, 5);
 
-            context.SetVertexBuffer(model.Data.VertexBufferView, 0, 44);
+            context.SetVertexBuffer(model.Data.VertexBufferView, 0, (uint)Unsafe.SizeOf<Vertex>());
             context.SetIndexBuffer(model.Data.IndexBufferView);
             context.SetPipelineState(material.Pipeline);
             context.SetPrimitiveToplogy(GfxPrimitiveTopology.TriangleList);
@@ -166,7 +173,9 @@ namespace SimpleLib.Render.Passes
         {
             if (_instancedTransformBufferLength < builder.Transforms.Count)
             {
-                _instancedTransformBufferLength = builder.Transforms.Count;
+                _instancedTransformBufferLength = (int)builder.Transforms.Count;
+
+                _instancedTransformBufferView?.Dispose();
                 _instancedTransformBuffer?.Dispose();
 
                 IGfxBuffer.CreateInfo desc = new IGfxBuffer.CreateInfo();
@@ -179,6 +188,7 @@ namespace SimpleLib.Render.Passes
                 desc.ElementByteStride = 64u;
 
                 _instancedTransformBuffer = _device.CreateBuffer(desc);
+                _instancedTransformBufferView = _instancedTransformBuffer?.CreateView(new IGfxBufferView.CreateInfo { Stride = (byte)desc.ElementByteStride });
             }
 
             Span<Matrix4x4> mapped = context.Map<Matrix4x4>(_instancedTransformBuffer, GfxMapType.Write, GfxMapFlags.Discard);
@@ -199,7 +209,7 @@ namespace SimpleLib.Render.Passes
                 CameraBufferData cameraData = new CameraBufferData()
                 {
                     ViewPosition = camera.RenderTransform.WorldPosition,
-                    ViewProjection = Matrix4x4.Identity
+                    ViewProjection = Matrix4x4.Multiply(view, proj)
                 };
 
                 Span<CameraBufferData> bufferData = commandBuffer.Map<CameraBufferData>(_cameraDataBuffer, GfxMapType.Write, GfxMapFlags.Discard);

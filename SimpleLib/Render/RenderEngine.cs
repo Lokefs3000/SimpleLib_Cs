@@ -163,14 +163,17 @@ namespace SimpleLib.Render
 
                 if (t && mr && meshRenderer.Mesh != null)
                 {
-                    _builder.Flags.Add(new RenderBuilder.RenderFlag
+                    lock (_builder.Flags)
                     {
-                        MeshObject = meshRenderer.Mesh,
-                        Material = meshRenderer.Material ?? _missing,
-                        TransformIndex = _builder.Transforms.Count
-                    });
+                        _builder.Flags.Add(new RenderBuilder.RenderFlag
+                        {
+                            MeshObject = meshRenderer.Mesh,
+                            Material = meshRenderer.Material ?? _missing,
+                            TransformIndex = (int)_builder.Transforms.Count
+                        });
 
-                    _builder.Transforms.Add(transform.WorldMatrix);
+                        _builder.Transforms.Add(transform.WorldMatrix);
+                    }
                 }
             }
         }

@@ -1,8 +1,11 @@
 ﻿using Serilog;
 using SharpGen.Runtime;
+using SimpleRHI.D3D12.Allocators;
 using SimpleRHI.D3D12.Descriptors;
 using SimpleRHI.D3D12.Helpers;
 using SimpleRHI.D3D12.Memory;
+using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -456,6 +459,7 @@ namespace SimpleRHI.D3D12
             DumpInfoLog();
 
             _isFirstGraphicsCommandBuffer = false;
+            _frameIndex = nextFence;
         }
 
         public void DumpInfoLog()

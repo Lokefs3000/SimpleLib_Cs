@@ -1,5 +1,6 @@
 ﻿using SimpleRHI.D3D12.Descriptors;
 using SimpleRHI.D3D12.Helpers;
+using Vortice.Direct3D12;
 
 namespace SimpleRHI.D3D12
 {
@@ -26,7 +27,18 @@ namespace SimpleRHI.D3D12
                 }
                 else if (parent.Desc.Bind == GfxBindFlags.ShaderResource)
                 {
-                    device.D3D12Device.CreateShaderResourceView(parent.D3D12Resource, null, _allocation.Value.GetCPUHandle());
+                    device.D3D12Device.CreateShaderResourceView(parent.D3D12Resource, new ShaderResourceViewDescription
+                    {
+                        Buffer = new BufferShaderResourceView
+                        {
+                            FirstElement = 0u,
+                            NumElements = (uint)(_parent.Desc.Size / ci.Stride),
+                            StructureByteStride = ci.Stride,
+                            Flags = BufferShaderResourceViewFlags.None
+                        },
+                        ViewDimension = ShaderResourceViewDimension.Buffer,
+                        Shader4ComponentMapping = ShaderComponentMapping.Default
+                    }, _allocation.Value.GetCPUHandle());
                 }
             }
         }

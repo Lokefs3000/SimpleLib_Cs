@@ -614,8 +614,9 @@ namespace SimpleRHI.D3D12
                     if (alloc.Buffer != null)
                     {
                         GfxBuffer buf = (GfxBuffer)buffer;
+
+                        buf.TransitionIfRequired(_commandList, ResourceStates.CopyDest);
                         _commandList.CopyBufferRegion(buf.D3D12Resource, 0, alloc.Buffer, alloc.Offset, alloc.Size);
-                        _commandList.ResourceBarrierTransition(buf.D3D12Resource, ResourceStates.CopyDest, FormatConverter.AsResourceState(buf.Desc.Bind));
                     }
 
                     _mapped.RemoveAt(i);
@@ -755,6 +756,8 @@ namespace SimpleRHI.D3D12
                             vbv.BufferLocation = vertexBuffer.Value.Value.BufferView.Buffer.GPUVirtualAddress;
                             vbv.SizeInBytes = (uint)vertexBuffer.Value.Value.BufferView.Buffer.Desc.Size;
                             vbv.StrideInBytes = vertexBuffer.Value.Value.Stride;
+
+                            vertexBuffer.Value.Value.BufferView.Buffer.TransitionIfRequired(_commandList, ResourceStates.VertexAndConstantBuffer);
                         }
                     }
                     else
@@ -794,6 +797,7 @@ namespace SimpleRHI.D3D12
                         _indexBufferView.SizeInBytes = (uint)_indexBuffer.Value.Value.BufferView.Buffer.Desc.Size;
                         _indexBufferView.Format = _indexBuffer.Value.Value.Stride;
 
+                        _indexBuffer.Value.Value.BufferView.Buffer.TransitionIfRequired(_commandList, ResourceStates.IndexBuffer);
                         _commandList.IASetIndexBuffer(_indexBufferView);
                     }
                 }
@@ -828,6 +832,7 @@ namespace SimpleRHI.D3D12
             {
                 _commandList.IASetPrimitiveTopology((PrimitiveTopology)_primitiveTopology.Value.GetValueOrDefault());
                 _topology_modified = false;
+
                 _primitiveTopology.Reset();
             }
 
@@ -848,45 +853,85 @@ namespace SimpleRHI.D3D12
                         case GfxGraphicsPipeline.BindlessParameter.DescriptorType.SRV:
                             {
                                 ref DirtyHandleClass<BindablePipelineResource> data = ref _srv[param.Slot];
-                                if (data.Dirty && data.Value != null)
+                                if (data.Dirty)
                                 {
-                                    if (data.Value.HasIndiceAtIndex(_id))
+                                    if (data.Value != null)
                                     {
-                                        _allocationIndices[param.Offset] = data.Value.GetIndiceAtIndex(_id);
+                                        if (data.Value.HasIndiceAtIndex(_id))
+                                        {
+                                            _allocationIndices[param.Offset] = data.Value.GetIndiceAtIndex(_id);
+                                        }
+                                        else
+                                        {
+                                            _unresolvedResources.Enqueue(new KeyValuePair<ushort, BindablePipelineResource>(param.Offset, data.Value));
+                                        }
                                     }
-                                    else
+                                    else if (_hasValidation)
                                     {
-                                        _unresolvedResources.Enqueue(new KeyValuePair<ushort, BindablePipelineResource>(param.Offset, data.Value));
+                                        GfxDevice.Logger?.Warning("SRV not bound on slot: #{a}!", param.Slot);
                                     }
+
                                     data.Reset();
                                 }
+                                else if (_hasValidation && data.Value == null)
+                                {
+                                    GfxDevice.Logger?.Warning("SRV not bound on slot: #{a}!", param.Slot);
+                                }
+
                                 break;
                             }
                         case GfxGraphicsPipeline.BindlessParameter.DescriptorType.CBV:
                             {
                                 ref DirtyHandleClass<BindablePipelineResource> data = ref _cbv[param.Slot];
-                                if (data.Dirty && data.Value != null)
+                                if (data.Dirty)
                                 {
-                                    _commandList.SetGraphicsRootConstantBufferView(param.Offset, ((GfxBufferView)data.Value).Buffer.GPUVirtualAddress);
+                                    if (data.Value != null)
+                                    {
+                                        ((GfxBufferView)data.Value).Buffer.TransitionIfRequired(_commandList, ResourceStates.VertexAndConstantBuffer);
+                                        _commandList.SetGraphicsRootConstantBufferView(param.Offset, ((GfxBufferView)data.Value).Buffer.GPUVirtualAddress);
+                                    }
+                                    else if (_hasValidation)
+                                    {
+                                        GfxDevice.Logger?.Warning("CBV not bound on slot: #{a}!", param.Slot);
+                                    }
+
                                     data.Reset();
                                 }
+                                else if (_hasValidation && data.Value == null)
+                                {
+                                    GfxDevice.Logger?.Warning("CBV not bound on slot: #{a}!", param.Slot);
+                                }
+
                                 break;
                             }
                         case GfxGraphicsPipeline.BindlessParameter.DescriptorType.UAV:
                             {
                                 ref DirtyHandleClass<BindablePipelineResource> data = ref _uav[param.Slot];
-                                if (data.Dirty && data.Value != null)
+                                if (data.Dirty)
                                 {
-                                    if (data.Value.HasIndiceAtIndex(_id))
+                                    if (data.Value != null)
                                     {
-                                        _allocationIndices[param.Offset] = data.Value.GetIndiceAtIndex(_id);
+                                        if (data.Value.HasIndiceAtIndex(_id))
+                                        {
+                                            _allocationIndices[param.Offset] = data.Value.GetIndiceAtIndex(_id);
+                                        }
+                                        else
+                                        {
+                                            _unresolvedResources.Enqueue(new KeyValuePair<ushort, BindablePipelineResource>(param.Offset, data.Value));
+                                        }
                                     }
-                                    else
+                                    else if (_hasValidation)
                                     {
-                                        _unresolvedResources.Enqueue(new KeyValuePair<ushort, BindablePipelineResource>(param.Offset, data.Value));
+                                        GfxDevice.Logger?.Warning("UAV not bound on slot: #{a}!", param.Slot);
                                     }
+
                                     data.Reset();
                                 }
+                                else if (_hasValidation && data.Value == null)
+                                {
+                                    GfxDevice.Logger?.Warning("UAV not bound on slot: #{a}!", param.Slot);
+                                }
+
                                 break;
                             }
                         case GfxGraphicsPipeline.BindlessParameter.DescriptorType.Constants:
@@ -894,9 +939,22 @@ namespace SimpleRHI.D3D12
                                 ref DirtyHandleSpan<uint> data = ref constants[param.Slot];
                                 if (data.Dirty)
                                 {
-                                    _commandList.SetGraphicsRoot32BitConstants(param.Offset, param.Size, data.Value, 0);
+                                    if (data.Value != null)
+                                    {
+                                        _commandList.SetGraphicsRoot32BitConstants(param.Offset, param.Size, data.Value, 0);
+                                    }
+                                    else
+                                    {
+                                        GfxDevice.Logger?.Warning("Constants not bound on slot: #{a}!", param.Slot);
+                                    }
+
                                     data.Reset();
                                 }
+                                else if (_hasValidation && data.Value == null)
+                                {
+                                    GfxDevice.Logger?.Warning("Constants not bound on slot: #{a}!", param.Slot);
+                                }
+
                                 break;
                             }
                         default: break;
@@ -909,11 +967,12 @@ namespace SimpleRHI.D3D12
                 DescriptorHeapAllocation dynamicHeap = _descriptorSuballocator.Allocate((uint)_unresolvedResources.Count);
                 CpuDescriptorHandle cpu = dynamicHeap.GetCPUHandle();
 
+                uint offset = (uint)dynamicHeap.Offset;
                 while (_unresolvedResources.TryDequeue(out var kvp))
                 {
                     BindablePipelineResource resource = kvp.Value;
                     _device.D3D12Device.CopyDescriptorsSimple(1, cpu, resource.GetHeapAllocation().GetCPUHandle(), DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
-                    _allocationIndices[kvp.Key] = (uint)((cpu.Ptr - dynamicHeap.GetCPUHandle(0).Ptr) / (ulong)dynamicHeap.DescriptorSize) + 1;
+                    _allocationIndices[kvp.Key] = offset++;
                     resource.SetIndiceAtIndex(_id, _allocationIndices[kvp.Key]);
                     cpu.Offset(dynamicHeap.DescriptorSize);
                 }
@@ -961,6 +1020,7 @@ namespace SimpleRHI.D3D12
             }*/
 
             _shader_resources_modified = false;
+            _topology_modified = false;
             _pipeline_modified = false;
         }
 

@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using SimpleRHI.D3D12.Allocators;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Vortice.Direct3D12;
 
@@ -9,7 +10,7 @@ namespace SimpleRHI.D3D12.Descriptors
         private IDescriptorHeap _parentHeap;
         private GfxDevice _device;
 
-        private DynamicGPUAllocator _allocator;
+        private IAllocator _allocator;
         private ID3D12DescriptorHeap _heap;
 
         private ushort _id;
@@ -24,7 +25,7 @@ namespace SimpleRHI.D3D12.Descriptors
         {
             _parentHeap = parentHeap;
             _device = device;
-            _allocator = new DynamicGPUAllocator((uint)(size >= 512 ? 64 : 8), size);
+            _allocator = shaderVisible ? new RingAllocator<uint>(size) : new DynamicGPUAllocator((uint)(size >= 512 ? 64 : 8), size);
             _heap = device.D3D12Device.CreateDescriptorHeap(new DescriptorHeapDescription(type, size, shaderVisible ? DescriptorHeapFlags.ShaderVisible : DescriptorHeapFlags.None));
             _id = id;
             _descriptorSize = (ushort)device.D3D12Device.GetDescriptorHandleIncrementSize(type);
@@ -43,14 +44,14 @@ namespace SimpleRHI.D3D12.Descriptors
             uint rounded = BitOperations.RoundUpToPowerOf2(size);
             ulong offset = _allocator.Allocate(rounded);
 
-            if (offset == DynamicGPUAllocator.InvalidOffset)
-                return new DescriptorHeapAllocation(_parentHeap, CpuDescriptorHandle.Default, GpuDescriptorHandle.Default, DynamicGPUAllocator.InvalidOffset, 0, 0, ushort.MaxValue);
+            if (offset == IAllocator.Invalid)
+                return new DescriptorHeapAllocation(_parentHeap, CpuDescriptorHandle.Default, GpuDescriptorHandle.Default, IAllocator.Invalid, 0, 0, ushort.MaxValue);
             return new DescriptorHeapAllocation(_parentHeap, new CpuDescriptorHandle(_firstCpuHandle, (int)(offset * _descriptorSize)), _shaderVisible ? _firstGpuHandle : GpuDescriptorHandle.Default, offset, (ushort)rounded, _descriptorSize, _id);
         }
 
         public void Free(ref DescriptorHeapAllocation allocation)
         {
-            _allocator.Free(allocation.Offset, allocation.NumDescriptors, _device.FrameIndex);
+            _allocator.Free(allocation.NumDescriptors, (uint)allocation.Offset, _device.FrameIndex);
             allocation.Reset();
         }
 
@@ -60,7 +61,7 @@ namespace SimpleRHI.D3D12.Descriptors
             _allocator.ReleaseStaleAllocations(frameIndex);
         }
 
-        public ulong FreeSize => _allocator.FreeSize;
+        public uint FreeSpace => _allocator.FreeSpace;
         public ushort Id => _id;
 
         public ID3D12DescriptorHeap D3D12DescriptorHeap => _heap;

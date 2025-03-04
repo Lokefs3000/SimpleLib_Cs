@@ -72,6 +72,7 @@ namespace SimpleRHI.D3D12
                     if (r.Failure)
                     {
                         GfxDevice.Logger?.Error("Failed to create buffer: {a}!", r.Code);
+                        _device.DumpInfoLog();
                         throw new Exception(r.Code.ToString());
                     }
                 }

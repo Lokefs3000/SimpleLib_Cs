@@ -1,10 +1,11 @@
-﻿using Arch.LowLevel;
-using SimpleLib.Components;
+﻿using SimpleLib.Components;
 using SimpleLib.Files;
 using SimpleLib.Resources.Data;
 using SimpleLib.Timing;
+using SimpleLib.Utility;
 using SimpleRHI;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace SimpleLib.Render.Components
 {
@@ -36,10 +37,10 @@ namespace SimpleLib.Render.Components
             ulong last = FileRegistry.Invalid;
             int lastIndex = 0;
 
-            for (int i = 0; i < Flags.Count; i++)
+            for (int i = 1; i < Flags.Count; i++)
             {
                 ulong curr = Flags[i].Material.Id;
-                if (curr != last)
+                if (curr != last || true)
                 {
                     RenderBatch batch = new RenderBatch();
                     batch.Material = Flags[i].Material;
@@ -48,7 +49,7 @@ namespace SimpleLib.Render.Components
 
                     Batches.Add(batch);
 
-                    Flags.Sort(batch.First, batch.Last, MeshComparer.Comparer);
+                    Flags.Sort(batch.First, batch.Last - batch.First, MeshComparer.Comparer);
 
                     last = curr;
                     lastIndex = i;
@@ -62,9 +63,10 @@ namespace SimpleLib.Render.Components
                 Batches[Batches.Count - 1] = batch;
             }
 
+            PerModel.Ensure((uint)Flags.Count);
             for (int i = 0; i < Flags.Count; i++)
             {
-                PerModel.Add(new PerModelData
+                PerModel.AddNoResize(new PerModelData
                 {
                     TransformIndex = (uint)Flags[i].TransformIndex,
                 });
@@ -118,6 +120,7 @@ namespace SimpleLib.Render.Components
             public int Last;
         }
 
+        [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct PerModelData
         {
             public uint TransformIndex;

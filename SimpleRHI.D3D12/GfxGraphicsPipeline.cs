@@ -65,7 +65,7 @@ namespace SimpleRHI.D3D12
                                         Offset = rootTableOffset++,
                                         Type = BindlessParameter.DescriptorType.CBV
                                     });
-                                    rootDescriptors.Add(new RootParameter1(RootParameterType.ConstantBufferView, new RootDescriptor1(descriptor.Slot, 0, RootDescriptorFlags.DataStatic), TranslateShaderVisibility(descriptor.Visibility)));
+                                    rootDescriptors.Add(new RootParameter1(RootParameterType.ConstantBufferView, new RootDescriptor1(descriptor.Slot, 0, RootDescriptorFlags.DataVolatile), TranslateShaderVisibility(descriptor.Visibility)));
                                     break;
                                 }
                             case GfxDescriptorType.Constant:
