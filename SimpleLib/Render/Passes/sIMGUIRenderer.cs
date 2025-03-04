@@ -40,6 +40,7 @@ namespace SimpleLib.Render.Passes
 
         public void Pass(RenderEngine engine, RenderPassData data)
         {
+            return;
             DrawList drawList = sIMGUI.DrawList;
             if (drawList.Vertices.IsEmpty || drawList.Indices.IsEmpty)
                 return;

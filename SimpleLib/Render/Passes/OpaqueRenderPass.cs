@@ -73,6 +73,7 @@ namespace SimpleLib.Render.Passes
 
                 context.SetConstantBuffer(_cameraDataBufferView, 6);
                 context.SetShaderResource(GfxShaderType.Vertex, _instancedTransformBufferView, 7);
+                context.SetConstantBuffer(_constantPerModelBufferView, 5);
 
                 for (int i = 0; i < engine.RenderBuilder.Batches.Count; i++)
                 {
@@ -83,7 +84,7 @@ namespace SimpleLib.Render.Passes
                     }
                     else
                     {
-                        DrawBatchConstant(context, engine.RenderBuilder, ref batch);
+                        DrawBatchConstant(context, engine.RenderBuilder, ref batch, i);
                     }
                 }
 
@@ -96,7 +97,7 @@ namespace SimpleLib.Render.Passes
 
         }
 
-        private void DrawBatchConstant(IGfxGraphicsCommandBuffer context, RenderBuilder builder, ref RenderBuilder.RenderBatch batch)
+        private void DrawBatchConstant(IGfxGraphicsCommandBuffer context, RenderBuilder builder, ref RenderBuilder.RenderBatch batch, int i = 0)
         {
             if (_constantPerModelBuffer == null)
             {
@@ -113,8 +114,8 @@ namespace SimpleLib.Render.Passes
 
             unsafe
             {
-                Span<RenderBuilder.PerModelData> mapped = context.Map<RenderBuilder.PerModelData>(_constantPerModelBuffer, GfxMapType.Write, GfxMapFlags.Discard);
-                mapped[0] = data;
+                Span<PerModelData> mapped = context.Map<PerModelData>(_constantPerModelBuffer, GfxMapType.Write, GfxMapFlags.Discard);
+                mapped[0] = new PerModelData { TransformIndex = (uint)flag.TransformIndex };
                 context.Unmap(_constantPerModelBuffer);
             }
 
@@ -125,8 +126,6 @@ namespace SimpleLib.Render.Passes
             material.Commit();
 
             material.DisableKeyword(KeywordInstancing);
-
-            context.SetConstantBuffer(_constantPerModelBufferView, 5);
 
             context.SetVertexBuffer(model.Data.VertexBufferView, 0, (uint)Unsafe.SizeOf<Vertex>());
             context.SetIndexBuffer(model.Data.IndexBufferView);
@@ -148,7 +147,7 @@ namespace SimpleLib.Render.Passes
             {
                 IGfxBuffer.CreateInfo desc = new IGfxBuffer.CreateInfo();
                 desc.Name = "ConstantPerModelBuffer";
-                desc.Size = 4ul;
+                desc.Size = (ulong)Unsafe.SizeOf<PerModelData>();
                 desc.Bind = GfxBindFlags.ConstantBuffer;
                 desc.MemoryUsage = GfxMemoryUsage.Dynamic;
                 desc.CpuAccess = GfxCPUAccessFlags.Write;
@@ -164,7 +163,7 @@ namespace SimpleLib.Render.Passes
             {
                 commandBuffer.SetViewport(new Vector4(0.0f, 0.0f, viewport.RenderResolution.X, viewport.RenderResolution.Y));
                 commandBuffer.SetScissor(new Vector4(0.0f, 0.0f, viewport.RenderResolution.X, viewport.RenderResolution.Y));
-                commandBuffer.ClearRenderTarget(viewport.BackbufferTextureView, new Color4(0.1f, 0.4f, 0.2f));
+                //commandBuffer.ClearRenderTarget(viewport.BackbufferTextureView, new Color4(0.1f, 0.4f, 0.2f));
                 commandBuffer.SetRenderTarget(viewport.BackbufferTextureView);
             }
         }
@@ -173,7 +172,7 @@ namespace SimpleLib.Render.Passes
         {
             if (_instancedTransformBufferLength < builder.Transforms.Count)
             {
-                _instancedTransformBufferLength = (int)builder.Transforms.Count;
+                _instancedTransformBufferLength = (int)builder.Transforms.Count * 2;
 
                 _instancedTransformBufferView?.Dispose();
                 _instancedTransformBuffer?.Dispose();

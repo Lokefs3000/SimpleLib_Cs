@@ -1,5 +1,6 @@
 ﻿using SharpGen.Runtime;
 using SimpleRHI.D3D12.Helpers;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using TerraFX.Interop.DirectX;
 using Vortice.Direct3D12;
@@ -28,6 +29,12 @@ namespace SimpleRHI.D3D12
         {
             _desc = ci;
             _device = device;
+
+            if (ci.Bind.HasFlag(GfxBindFlags.ConstantBuffer) && (ci.Size % 16) != 0)
+            {
+                GfxDevice.Logger?.Error("ConstantBuffer must be power of 16! Actual size: {}b.", ci.Size);
+                throw new ArgumentException("ConstantBuffer size is not a power of 16!", "ci.Size");
+            }
 
             D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATES.D3D12_RESOURCE_STATE_COMMON;
             switch (ci.Bind)

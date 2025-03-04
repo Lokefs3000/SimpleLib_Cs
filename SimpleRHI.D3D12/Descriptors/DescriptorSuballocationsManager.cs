@@ -33,7 +33,14 @@ namespace SimpleRHI.D3D12.Descriptors
             ref DescriptorHeapAllocation suballocation = ref span[span.Length - 1];
 
             ushort managerId = suballocation.ManagerId;
-            DescriptorHeapAllocation allocation = new DescriptorHeapAllocation(this, suballocation.GetCPUHandle(_currentSuballocationOffset), suballocation.GetGPUHandle(_currentSuballocationOffset), suballocation.Offset + _currentSuballocationOffset, (ushort)size, suballocation.DescriptorSize, managerId);
+            DescriptorHeapAllocation allocation = new DescriptorHeapAllocation(
+                this,
+                suballocation.GetCPUHandle(_currentSuballocationOffset),
+                suballocation.GetGPUHandle(_currentSuballocationOffset),
+                suballocation.Offset + _currentSuballocationOffset,
+                (ushort)size,
+                suballocation.DescriptorSize,
+                managerId);
 
             _currentSuballocationOffset += size;
             return allocation;

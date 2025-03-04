@@ -223,15 +223,16 @@ namespace SimpleEditor.Import.Processors
                         fixed (byte* ptr00 = &vertices[(int)(vertexOffset++ * vertexStride)])
                         {
                             Vertex* v = (Vertex*)ptr00;
-                            v->Position = new Vector3(mesh->MVertices[j].X, mesh->MVertices[j].Y, mesh->MVertices[j].Z);
+                            v->Position = mesh->MVertices[j];
                             if (hasUVs)
                                 v->UV = new Vector2(mesh->MTextureCoords[0][j].X, mesh->MTextureCoords[0][j].Y);
                             else
                                 v->UV = new Vector2(0, 0);
+                            v->Normal = mesh->MNormals[j];
                             if (hasTangents)
-                                v->Tangent = new Vector3(mesh->MTangents[j].X, mesh->MTangents[j].Y, mesh->MTangents[j].Z);
+                                v->Tangent = mesh->MTangents[j];
                             else
-                                v->Tangent = new Vector3(0, 0, 0);
+                                v->Tangent = Vector3.Zero;
                         }
                     }
                 }

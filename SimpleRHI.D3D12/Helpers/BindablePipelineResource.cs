@@ -10,12 +10,13 @@ namespace SimpleRHI.D3D12.Helpers
 {
     internal class BindablePipelineResource
     {
-        private uint[] _descriptorIndices = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        private uint[] _descriptorIndices = [ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue];
+        private ulong[] _descriptorFrames = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool HasIndiceAtIndex(ushort index)
+        public bool HasIndiceAtIndex(ushort index, ulong frame)
         {
-            return _descriptorIndices.Length < index && _descriptorIndices[index] != ushort.MaxValue;
+            return _descriptorIndices.Length > index && _descriptorFrames[index] == frame && _descriptorIndices[index] != ushort.MaxValue;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -31,9 +32,10 @@ namespace SimpleRHI.D3D12.Helpers
         }
 
         [MethodImpl (MethodImplOptions.AggressiveInlining)]
-        public void SetIndiceAtIndex(ushort index, uint value)
+        public void SetIndiceAtIndex(ushort index, uint value, ulong frame)
         {
             _descriptorIndices[index] = value;
+            _descriptorFrames[index] = frame;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

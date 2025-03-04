@@ -128,6 +128,8 @@ namespace SimpleEditor.Resources
             using IDxcIncludeHandler includeHandler2 = new ShaderIncludeHandler("Engine/", "Engine/Shaders/", _projectFs.RootPath, _projectFs.Exists(id) ? _projectFs.GetFullPath(id) ?? string.Empty : string.Empty);
 
             string[] arguments = [
+                sourceData.LocalPath,
+
                 "-O3",
                 "-Zpr",
                 "-HV", "2021",
@@ -135,6 +137,7 @@ namespace SimpleEditor.Resources
 
 #if DEBUG
                 "-Zi",
+                "-Qembed_debug",
 #else
                 "-Qstrip_debug",
                 "-Qstrip_reflect",

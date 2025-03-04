@@ -74,7 +74,7 @@ namespace SimpleLib.Render.Components
         {
             foreach (var kvp in _windows)
             {
-                kvp.Value.SwapChain?.Present(0);
+                kvp.Value.SwapChain?.Present(1u);
             }
         }
 

@@ -17,6 +17,8 @@ struct PsInput
 
     float3 Vertex : POSITION0;
     float3 Normal : NORMAL0;
+
+    uint C : COLOR;
 };
 
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_VERTEX
@@ -30,6 +32,7 @@ PsInput VertexMain(VsInput input, uint instance : SV_InstanceID)
     output.Vertex   = mul(float4(input.Position, 1.0), transforms[perModel.Model]).xyz;  //M
     output.Position = mul(float4(output.Vertex, 1.0), camera.ViewProjection);            //VP
     output.Normal   = input.Normal;
+    output.C = perModel.Model;
 
     return output;
 }
@@ -46,6 +49,6 @@ float4 PixelMain(PsInput input) : SV_Target0
     float isEven  = fmod(checker, 2.0) * 0.2 + 0.9;
 
     //return float4(float3(0.0, 0.7, 0.7) * isEven, 1.0);
-    return 1.0;
+    return input.C / 512.0;
 }
 #endif

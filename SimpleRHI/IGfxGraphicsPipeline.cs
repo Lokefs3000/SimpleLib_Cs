@@ -74,7 +74,7 @@
                     SourceBlendAlpha = GfxBlend.One;
                     DestinationBlendAlpha = GfxBlend.Zero;
                     BlendOperationAlpha = GfxBlendOperation.Add;
-                    LogicOperation = GfxLogicOperation.NoOp;
+                    LogicOperation = GfxLogicOperation.Clear;
                     RenderTargetWriteMask = GfxColorWriteEnable.All;
                 }
             }

@@ -3,9 +3,12 @@ using SimpleRHI.D3D12.Allocators;
 using SimpleRHI.D3D12.Descriptors;
 using SimpleRHI.D3D12.Helpers;
 using SimpleRHI.D3D12.Memory;
+using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using TerraFX.Interop.Windows;
+using TerraFX.Interop.WinRT;
 using Vortice;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
@@ -92,7 +95,10 @@ namespace SimpleRHI.D3D12
 
             _constantAllocator = new AlignedBlockAllocator(128, 16);
 
-            _enablePIX = enablePIX;
+            string pix1 = Path.GetDirectoryName(Environment.ProcessPath) + "\\runtimes\\win-x64\\native\\WinPixEventRuntime.dll";
+            string pix2 = Path.GetDirectoryName(Environment.ProcessPath) + "\\WinPixEventRuntime.dll";
+            
+            _enablePIX = File.Exists(pix1) || File.Exists(pix2);
             _hasValidation = validation;
             _isOpen = false;
 
@@ -391,6 +397,11 @@ namespace SimpleRHI.D3D12
             }
             else
             {
+                if (_vertexBuffer[slot].Value.HasValue && _vertexBuffer[slot].Value.Value.BufferView == buffer)
+                {
+                    return;
+                }
+
                 GfxBufferView bufferView = (GfxBufferView)buffer;
                 _vertexBuffer[slot].Value = new VertexBufferViewData
                 {
@@ -412,6 +423,11 @@ namespace SimpleRHI.D3D12
                 }
                 else
                 {
+                    if (_vertexBuffer[i].Value.HasValue && _vertexBuffer[i].Value.Value.BufferView == buffers[i])
+                    {
+                        continue;
+                    }
+
                     GfxBufferView bufferView = (GfxBufferView)buffers[i];
                     _vertexBuffer[i].Value = new VertexBufferViewData
                     {
@@ -433,6 +449,11 @@ namespace SimpleRHI.D3D12
             }
             else
             {
+                if (_indexBuffer.Value.HasValue && _indexBuffer.Value.Value.BufferView == buffer)
+                {
+                    return;
+                }
+
                 GfxBufferView bufferView = (GfxBufferView)buffer;
                 _indexBuffer.Value = new IndexBufferViewData
                 {
@@ -525,6 +546,11 @@ namespace SimpleRHI.D3D12
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetPipelineState(IGfxGraphicsPipeline? pipeline)
         {
+            if (_pipelineState.Value == pipeline)
+            {
+                return;
+            }
+
             _pipelineState.Value = (GfxGraphicsPipeline?)pipeline;
             _pipeline_modified = true;
         }
@@ -532,6 +558,11 @@ namespace SimpleRHI.D3D12
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetPrimitiveToplogy(GfxPrimitiveTopology topology)
         {
+            if (_primitiveTopology.Value.HasValue && _primitiveTopology.Value.Value == topology)
+            {
+                return;
+            }
+
             _primitiveTopology.Value = topology;
             _topology_modified = true;
         }
@@ -853,16 +884,17 @@ namespace SimpleRHI.D3D12
                         case GfxGraphicsPipeline.BindlessParameter.DescriptorType.SRV:
                             {
                                 ref DirtyHandleClass<BindablePipelineResource> data = ref _srv[param.Slot];
-                                if (data.Dirty)
+                                if (data.Dirty || true)
                                 {
                                     if (data.Value != null)
                                     {
-                                        if (data.Value.HasIndiceAtIndex(_id))
+                                        if (data.Value.HasIndiceAtIndex(_id, _device.FrameIndex))
                                         {
                                             _allocationIndices[param.Offset] = data.Value.GetIndiceAtIndex(_id);
                                         }
                                         else
                                         {
+                                            ((GfxBufferView)data.Value).Buffer.TransitionIfRequired(_commandList, ResourceStates.AllShaderResource);
                                             _unresolvedResources.Enqueue(new KeyValuePair<ushort, BindablePipelineResource>(param.Offset, data.Value));
                                         }
                                     }
@@ -911,12 +943,13 @@ namespace SimpleRHI.D3D12
                                 {
                                     if (data.Value != null)
                                     {
-                                        if (data.Value.HasIndiceAtIndex(_id))
+                                        if (data.Value.HasIndiceAtIndex(_id, _device.FrameIndex))
                                         {
                                             _allocationIndices[param.Offset] = data.Value.GetIndiceAtIndex(_id);
                                         }
                                         else
                                         {
+                                            ((GfxBufferView)data.Value).Buffer.TransitionIfRequired(_commandList, ResourceStates.UnorderedAccess);
                                             _unresolvedResources.Enqueue(new KeyValuePair<ushort, BindablePipelineResource>(param.Offset, data.Value));
                                         }
                                     }
@@ -973,7 +1006,7 @@ namespace SimpleRHI.D3D12
                     BindablePipelineResource resource = kvp.Value;
                     _device.D3D12Device.CopyDescriptorsSimple(1, cpu, resource.GetHeapAllocation().GetCPUHandle(), DescriptorHeapType.ConstantBufferViewShaderResourceViewUnorderedAccessView);
                     _allocationIndices[kvp.Key] = offset++;
-                    resource.SetIndiceAtIndex(_id, _allocationIndices[kvp.Key]);
+                    resource.SetIndiceAtIndex(_id, _allocationIndices[kvp.Key], _device.FrameIndex);
                     cpu.Offset(dynamicHeap.DescriptorSize);
                 }
 

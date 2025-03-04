@@ -162,6 +162,7 @@ namespace SimpleRHI.D3D12
                     else
                     {
                         debug.SetEnableAutoName(true);
+                        debug.SetEnableGPUBasedValidation(true);
                     }
 
                     _debug.EnableDebugLayer();
@@ -182,6 +183,17 @@ namespace SimpleRHI.D3D12
             if (ci.DebuggingEnabled && _debug != null)
             {
                 _infoQueue = _device.QueryInterfaceOrNull<ID3D12InfoQueue>();
+                _infoQueue?.PushStorageFilter(new InfoQueueFilter()
+                {
+                    AllowList = new InfoQueueFilterDescription
+                    {
+                        Severities = [MessageSeverity.Message, MessageSeverity.Info, MessageSeverity.Warning, MessageSeverity.Error, MessageSeverity.Corruption]
+                    },
+                    DenyList = new InfoQueueFilterDescription
+                    {
+                        Categories = [ MessageCategory.StateCreation ]
+                    }
+                });
             }
 
             {
