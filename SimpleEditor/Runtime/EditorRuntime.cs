@@ -31,7 +31,7 @@ namespace SimpleEditor.Runtime
             Importer = new Importer(this);
             ProjectFileSystem = new ProjectFileSystem(Filesystem, Importer, "Project");
             EngineFilesystem = new EngineRealFilesystem(Filesystem.Registry);
-            EditorShaderPackage = new EditorShaderPackage(Filesystem, ProjectFileSystem);
+            EditorShaderPackage = new EditorShaderPackage(Filesystem, ProjectFileSystem, EngineFilesystem);
 
             Filesystem.AddNewFilesystem(ProjectFileSystem);
             Filesystem.AddNewFilesystem(EngineFilesystem);

@@ -23,6 +23,7 @@ namespace SimpleLib.Resources
             public List<VariantBitmask> Variants = new List<VariantBitmask>();
 
             public List<IGfxGraphicsPipeline.CreateInfo.RenderTargetBlendDesc> BlendDescriptions = new List<IGfxGraphicsPipeline.CreateInfo.RenderTargetBlendDesc>();
+            public IGfxGraphicsPipeline.CreateInfo CreateInfo;
 
             public struct VariantMask
             {

@@ -35,7 +35,7 @@ namespace SimpleLib.Runtime
             CommandArguments.Parse(ref ci.CommandArguments);
 
             Filesystem = new Filesystem(ci.RegistryFilePath);
-            JobScheduler = new JobScheduler(new JobScheduler.Config());
+            JobScheduler = new JobScheduler(new JobScheduler.Config { ThreadPrefixName = "SchedulerWorker" });
             WindowRegistry = new WindowRegistry();
             ECSSystemHandler = new ECSSystemHandler();
             FrameManager = new FrameManager();

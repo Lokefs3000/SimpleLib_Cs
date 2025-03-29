@@ -30,7 +30,7 @@ namespace SimpleRHI.D3D12.Allocators
         public RingAllocator(uint capacity)
         {
             _ring = (uint*)NativeMemory.Alloc(capacity, (nuint)sizeof(T));
-            _returned = new uint[3] { 0, 0, 0 }; /*max 3 frames in flight at once limit*/
+            _returned = new uint[3] { 0, 0, 0 }; /*max 2 (+1 for some reason) frames in flight at once limit*/
             _lastFrame = 0;
             _head = 0;
             _tail = 0;

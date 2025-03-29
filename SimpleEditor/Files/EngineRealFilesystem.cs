@@ -53,5 +53,11 @@ namespace SimpleEditor.Files
 
             return null;
         }
+
+        public string? GetInternalPath(ulong id)
+        {
+            _files.TryGetValue(id, out string? path);
+            return path;
+        }
     }
 }

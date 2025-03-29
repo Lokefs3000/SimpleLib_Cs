@@ -21,13 +21,15 @@ namespace SimpleEditor.Resources
     {
         private Filesystem _filesystem;
         private ProjectFileSystem _projectFs;
+        private EngineRealFilesystem _engineFs;
 
         private Dictionary<ulong, ShaderSourceData> _shaders = new Dictionary<ulong, ShaderSourceData>();
 
-        public EditorShaderPackage(Filesystem filesystem, ProjectFileSystem projectFs)
+        public EditorShaderPackage(Filesystem filesystem, ProjectFileSystem projectFs, EngineRealFilesystem engineFs)
         {
             _filesystem = filesystem;
             _projectFs = projectFs;
+            _engineFs = engineFs;
         }
 
         public void Dispose()
@@ -82,6 +84,7 @@ namespace SimpleEditor.Resources
                         }
 
                         sourceData.CachedReflectionData.BlendDescriptions = sourceData.BlendDescriptions;
+                        sourceData.CachedReflectionData.CreateInfo = sourceData.CreateInfo;
                     }
 
                     return sourceData.CachedReflectionData;
@@ -91,6 +94,7 @@ namespace SimpleEditor.Resources
                 data.Variants = sourceData.Variants;
 
                 data.BlendDescriptions = sourceData.BlendDescriptions;
+                data.CreateInfo = sourceData.CreateInfo;
 
                 foreach (var kvp in sourceData.VariantData)
                 {
@@ -448,6 +452,10 @@ namespace SimpleEditor.Resources
             if (_projectFs.Exists(id))
             {
                 sourceData.LocalPath = _projectFs.GetLocalPath(id) ?? $"Unresolved-{id}";
+            }
+            else if (_engineFs.Exists(id))
+            {
+                sourceData.LocalPath = _engineFs.GetInternalPath(id) ?? $"Unresolved-{id}";
             }
             else
             {
@@ -906,11 +914,11 @@ namespace SimpleEditor.Resources
 
                         current--;
                     }
-                    else if (directive == "define")
+                    else if (directive == "pragma")
                     {
-                        if (maskName.StartsWith("BLEND_RT"))
+                        if (maskName.StartsWith("BlendRT"))
                         {
-                            int blendRTIndex = int.Parse(maskName.Substring(8));
+                            int blendRTIndex = int.Parse(maskName.Substring(7));
                             if (data.BlendDescriptions.Count <= blendRTIndex)
                             {
                                 while (data.BlendDescriptions.Count <= blendRTIndex)
@@ -997,6 +1005,35 @@ namespace SimpleEditor.Resources
                             }
 
                             data.BlendDescriptions[blendRTIndex] = rtbd;
+                        }
+                        else if (maskName == "ZCull")
+                        {
+                            string value = processed.Substring(current, processed.IndexOf('\n', current) - current).Trim().Trim('"');
+
+                            if (value == "Off")
+                            {
+                                data.CreateInfo.DepthStencil.DepthEnable = false;
+                                data.CreateInfo.DepthStencil.DepthWriteMask = GfxDepthWriteMask.Zero;
+                            }
+                            else if (Enum.TryParse<GfxComparisonFunction>(value, out GfxComparisonFunction func))
+                            {
+                                data.CreateInfo.DepthStencil.DepthEnable = (func > GfxComparisonFunction.None);
+                                data.CreateInfo.DepthStencil.DepthFunction = func;
+                                data.CreateInfo.DepthStencil.DepthWriteMask = GfxDepthWriteMask.All;
+                            }
+                        }
+                        else if (maskName == "ZWrite")
+                        {
+                            string value = processed.Substring(current, processed.IndexOf('\n', current) - current).Trim().Trim('"');
+
+                            if (value == "Zero")
+                            {
+                                data.CreateInfo.DepthStencil.DepthWriteMask = GfxDepthWriteMask.Zero;
+                            }
+                            else if (value == "All")
+                            {
+                                data.CreateInfo.DepthStencil.DepthWriteMask = GfxDepthWriteMask.All;
+                            }
                         }
                     }
                 }
@@ -1224,6 +1261,7 @@ namespace SimpleEditor.Resources
             public List<DefinedSamplerState> SamplerStates = new List<DefinedSamplerState>();
 
             public List<IGfxGraphicsPipeline.CreateInfo.RenderTargetBlendDesc> BlendDescriptions = new List<IGfxGraphicsPipeline.CreateInfo.RenderTargetBlendDesc>();
+            public IGfxGraphicsPipeline.CreateInfo CreateInfo = new IGfxGraphicsPipeline.CreateInfo();
         }
 
         private class ShaderVariantData

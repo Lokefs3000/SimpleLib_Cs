@@ -1,10 +1,12 @@
 ﻿using SimpleLib.Components;
 using SimpleLib.Files;
+using SimpleLib.Render.Data.Structures;
 using SimpleLib.Resources.Data;
 using SimpleLib.Timing;
 using SimpleLib.Utility;
 using SimpleRHI;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace SimpleLib.Render.Components
@@ -19,6 +21,8 @@ namespace SimpleLib.Render.Components
         public UnsafeList<Matrix4x4> Transforms = new UnsafeList<Matrix4x4>(64);
         public UnsafeList<PerModelData> PerModel = new UnsafeList<PerModelData>(64);
 
+        public uint LargestBatch = 0u;
+
         public void Dispose()
         {
             Transforms.Dispose();
@@ -32,7 +36,7 @@ namespace SimpleLib.Render.Components
         {
             DebugTimers.StartTimer("RenderBuilder.Compile");
 
-            Flags.Sort(MaterialComparer.Comparer);
+            //Flags.Sort(MaterialComparer.Comparer);
 
             ulong last = FileRegistry.Invalid;
             int lastIndex = 0;
@@ -40,7 +44,7 @@ namespace SimpleLib.Render.Components
             for (int i = 1; i < Flags.Count; i++)
             {
                 ulong curr = Flags[i].Material.Id;
-                if (curr != last || true)
+                if (curr != last || true/*hack to avoid batching for debugging*/)
                 {
                     RenderBatch batch = new RenderBatch();
                     batch.Material = Flags[i].Material;
@@ -49,10 +53,12 @@ namespace SimpleLib.Render.Components
 
                     Batches.Add(batch);
 
-                    Flags.Sort(batch.First, batch.Last - batch.First, MeshComparer.Comparer);
+                    //Flags.Sort(batch.First, batch.Last - batch.First, MeshComparer.Comparer);
 
                     last = curr;
                     lastIndex = i;
+
+                    LargestBatch = (uint)Math.Max(LargestBatch, batch.Last - batch.First);
                 }
             }
 
@@ -61,6 +67,7 @@ namespace SimpleLib.Render.Components
                 RenderBatch batch = Batches[Batches.Count - 1];
                 batch.Last = Flags.Count;
                 Batches[Batches.Count - 1] = batch;
+                LargestBatch = (uint)Math.Max(LargestBatch, batch.Last - batch.First);
             }
 
             PerModel.Ensure((uint)Flags.Count);
@@ -82,10 +89,12 @@ namespace SimpleLib.Render.Components
             Flags.Clear();
             Transforms.Clear();
             PerModel.Clear();
+            LargestBatch = 0;
         }
 
         private class MaterialComparer : IComparer<RenderFlag>
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(RenderFlag x, RenderFlag y)
             {
                 return (int)(x.Material.Id - y.Material.Id);
@@ -96,6 +105,7 @@ namespace SimpleLib.Render.Components
 
         private class MeshComparer : IComparer<RenderFlag>
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(RenderFlag x, RenderFlag y)
             {
                 return (int)(x.MeshObject.OwningModel.Id - y.MeshObject.OwningModel.Id);
@@ -118,12 +128,6 @@ namespace SimpleLib.Render.Components
 
             public int First;
             public int Last;
-        }
-
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        public struct PerModelData
-        {
-            public uint TransformIndex;
         }
 
         public struct RenderPoints

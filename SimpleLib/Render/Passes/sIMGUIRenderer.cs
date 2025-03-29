@@ -40,13 +40,13 @@ namespace SimpleLib.Render.Passes
 
         public void Pass(RenderEngine engine, RenderPassData data)
         {
-            return;
             DrawList drawList = sIMGUI.DrawList;
             if (drawList.Vertices.IsEmpty || drawList.Indices.IsEmpty)
                 return;
 
-            IGfxGraphicsCommandBuffer commandBuffer = engine.CommandBufferPool.GetContext();
             ViewportRenderData viewport = data.Get<ViewportRenderData>() ?? throw new NullReferenceException();
+
+            IGfxGraphicsCommandBuffer commandBuffer = engine.CommandBufferPool.GetContext("sIMGUI");
 
             UpdateAndPrepareBuffers(drawList, engine.DeviceManager.RenderDevice, commandBuffer);
             DrawBuffersToScreen(drawList, commandBuffer, viewport);

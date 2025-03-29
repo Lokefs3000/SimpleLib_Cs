@@ -54,10 +54,10 @@ namespace SimpleLib.Resources.Data
                 return -1;
             }
 
-            Span<Storage.VariantData> variants = _storage.Variants.AsSpan();
+            Span<VariantBitmask> variants = _storage.Variants.AsSpan();
             for (int i = 0; i < variants.Length; i++)
             {
-                ref Storage.VariantData data = ref variants[i];
+                ref VariantBitmask data = ref variants[i];
                 if (data.Name == keyword)
                 {
                     return i;
@@ -94,11 +94,12 @@ namespace SimpleLib.Resources.Data
             _storage.Shader = null;
 
             IShaderPackage.ReflectionData? reflection = shader?.Reflection;
-            _storage.Reflection = reflection;
-
             if (true)
             {
                 _storage.Dispose();
+
+                _storage.Reflection = reflection;
+                _storage.Variants = reflection?.Variants.ToArray();
                 _storage.Shader = shader;
 
                 if (_storage.Shader == null)
@@ -116,7 +117,7 @@ namespace SimpleLib.Resources.Data
             public Shader? Shader;
             public ulong ActiveVariant = 0;
             public IShaderPackage.ReflectionData? Reflection;
-            public VariantData[]? Variants = null;
+            public VariantBitmask[]? Variants = null;
 
             public void Dispose()
             {
@@ -124,12 +125,6 @@ namespace SimpleLib.Resources.Data
                 Shader = null;
                 Reflection = null;
                 Variants = null;
-            }
-
-            public struct VariantData
-            {
-                public string Name;
-                public ulong Bit;
             }
         }
     }

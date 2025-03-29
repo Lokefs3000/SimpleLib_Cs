@@ -3,18 +3,14 @@ using SimpleRHI.D3D12.Allocators;
 using SimpleRHI.D3D12.Descriptors;
 using SimpleRHI.D3D12.Helpers;
 using SimpleRHI.D3D12.Memory;
-using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using TerraFX.Interop.Windows;
-using TerraFX.Interop.WinRT;
 using Vortice;
 using Vortice.Direct3D;
 using Vortice.Direct3D12;
 using Vortice.DXGI;
 using Vortice.Mathematics;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace SimpleRHI.D3D12
 {
@@ -97,7 +93,7 @@ namespace SimpleRHI.D3D12
 
             string pix1 = Path.GetDirectoryName(Environment.ProcessPath) + "\\runtimes\\win-x64\\native\\WinPixEventRuntime.dll";
             string pix2 = Path.GetDirectoryName(Environment.ProcessPath) + "\\WinPixEventRuntime.dll";
-            
+
             _enablePIX = File.Exists(pix1) || File.Exists(pix2);
             _hasValidation = validation;
             _isOpen = false;
@@ -174,6 +170,12 @@ namespace SimpleRHI.D3D12
             _indexBuffer.Value = null;
             _pipelineState.Value = null;
             _primitiveTopology.Value = null;
+
+            _rtv_dsv_modified = true;
+            _input_layout_modified = true;
+            _pipeline_modified = true;
+            _shader_resources_modified = true;
+            _topology_modified = true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -182,6 +184,7 @@ namespace SimpleRHI.D3D12
             if (_isOpen)
             {
                 //throw new InvalidOperationException("Cannot begin open command list!");
+                GfxDevice.Logger?.Debug("Cannot begin already begun command list!");
                 return;
             }
 
@@ -200,6 +203,7 @@ namespace SimpleRHI.D3D12
             if (!_isOpen)
             {
                 //throw new InvalidOperationException("Cannot close non-open command list!");
+                GfxDevice.Logger?.Debug("Cannot close already closed command list!");
                 return;
             }
 
@@ -215,6 +219,7 @@ namespace SimpleRHI.D3D12
             if (_mapped.Count > 0)
             {
                 GfxDevice.Logger?.Warning("Leaked active map allocations!!");
+                _mapped.Clear();
             }
 
             _cachedAlloc?.Free();
@@ -281,20 +286,11 @@ namespace SimpleRHI.D3D12
                 _commandList.ClearRenderTargetView(view.Descriptor.GetCPUHandle(), rgba);
             }
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ClearDepthStencil(IGfxTextureView depthStencil, float depth = 1.0f, byte stencil = 0xff)
         {
             GfxTextureView view = (GfxTextureView)depthStencil;
-
-            ClearFlags flags = 0;
-            if (depth != 1.0f)
-                flags |= ClearFlags.Depth;
-            if (stencil != 0xff)
-                flags |= ClearFlags.Stencil;
-
-            if (flags > 0)
-            {
-                _commandList.ClearDepthStencilView(view.Descriptor.GetCPUHandle(), flags, depth, stencil);
-            }
+            _commandList.ClearDepthStencilView(view.Descriptor.GetCPUHandle(), ClearFlags.Depth | ClearFlags.Stencil, depth, stencil);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -588,7 +584,20 @@ namespace SimpleRHI.D3D12
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void DrawInstancedIndexed(in IGfxGraphicsCommandBuffer.DrawIndexedInstancedAttribs attribs)
         {
-            throw new NotImplementedException();
+            GfxGraphicsPipeline? pipeline = _pipelineState.Value;
+            if (pipeline == null)
+            {
+                return;
+            }
+
+            if (_rtv_dsv_modified)
+                BindRTVsAndDSV();
+            if (_input_layout_modified)
+                BindVertexBuffersAndIndexBuffer();
+            if (_shader_resources_modified || _pipeline_modified || _topology_modified)
+                BindShaderResources();
+
+            _commandList.DrawIndexedInstanced(attribs.IndexCount, attribs.InstanceCount, attribs.IndexOffset, attribs.BaseVertex, attribs.InstanceOffset);
         }
 
         public unsafe Span<T> Map<T>(IGfxBuffer buffer, GfxMapType type, GfxMapFlags flags) where T : unmanaged
@@ -853,6 +862,7 @@ namespace SimpleRHI.D3D12
             GfxGraphicsPipeline pipeline = _pipelineState.Value ?? throw new NullReferenceException();
             if (_pipeline_modified || _pipelineState.Dirty)
             {
+                //weird memory leak here..?
                 _commandList.SetPipelineState(pipeline.D3D12PipelineState);
                 _commandList.SetGraphicsRootSignature(pipeline.D3D12RootSignature);
 
@@ -862,11 +872,11 @@ namespace SimpleRHI.D3D12
             if (_topology_modified || _primitiveTopology.Dirty)
             {
                 _commandList.IASetPrimitiveTopology((PrimitiveTopology)_primitiveTopology.Value.GetValueOrDefault());
-                _topology_modified = false;
 
                 _primitiveTopology.Reset();
+                _topology_modified = false;
             }
-
+        
             if (_pipeline_modified || _shader_resources_modified)
             {
                 Span<DirtyHandleClass<BindablePipelineResource>> srv = _srv.AsSpan();
@@ -894,7 +904,11 @@ namespace SimpleRHI.D3D12
                                         }
                                         else
                                         {
-                                            ((GfxBufferView)data.Value).Buffer.TransitionIfRequired(_commandList, ResourceStates.AllShaderResource);
+                                            if (data.Value is GfxBufferView)
+                                                ((GfxBufferView)data.Value).Buffer.TransitionIfRequired(_commandList, ResourceStates.AllShaderResource);
+                                            else
+                                                ((GfxTextureView)data.Value).Texture.TransitionIfRequired(_commandList, ResourceStates.AllShaderResource);
+
                                             _unresolvedResources.Enqueue(new KeyValuePair<ushort, BindablePipelineResource>(param.Offset, data.Value));
                                         }
                                     }
@@ -993,6 +1007,8 @@ namespace SimpleRHI.D3D12
                         default: break;
                     }
                 }
+
+                _shader_resources_modified = false;
             }
 
             if (_unresolvedResources.Count > 0)
@@ -1010,8 +1026,8 @@ namespace SimpleRHI.D3D12
                     cpu.Offset(dynamicHeap.DescriptorSize);
                 }
 
-                _cachedAlloc?.Free();
-                _cachedAlloc = dynamicHeap;
+                //_cachedAlloc?.Free();
+                //_cachedAlloc = dynamicHeap;
             }
 
             fixed (uint* ptr = _allocationIndices)
@@ -1108,7 +1124,7 @@ namespace SimpleRHI.D3D12
 
             public T? Value { get => _value; set { if (_value != value) { _value = value; _dirty = true; } } }
             public bool Dirty => _dirty;
-            
+
             public DirtyHandleClass()
             {
                 _value = null;

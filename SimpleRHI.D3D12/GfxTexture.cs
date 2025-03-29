@@ -27,8 +27,8 @@ namespace SimpleRHI.D3D12
             switch (ci.Bind)
             {
                 case GfxBindFlags.ShaderResource: resourceState = D3D12_RESOURCE_STATES.D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE; break;
-                case GfxBindFlags.DepthStencil: break;
-                case GfxBindFlags.RenderTarget: break;
+                case GfxBindFlags.DepthStencil: resourceState = D3D12_RESOURCE_STATES.D3D12_RESOURCE_STATE_DEPTH_WRITE; break;
+                case GfxBindFlags.RenderTarget: resourceState = D3D12_RESOURCE_STATES.D3D12_RESOURCE_STATE_RENDER_TARGET; break;
                 case GfxBindFlags.Unkown:
                 default:
                     {
@@ -68,7 +68,13 @@ namespace SimpleRHI.D3D12
                 resourceDesc.Format = (DXGI_FORMAT)FormatConverter.Translate(ci.Format);
                 resourceDesc.Layout = D3D12_TEXTURE_LAYOUT.D3D12_TEXTURE_LAYOUT_UNKNOWN;
                 resourceDesc.SampleDesc = new DXGI_SAMPLE_DESC(1, 0);
-
+                
+                //make capable for RTs aswell
+                D3D12_CLEAR_VALUE clearValue = new D3D12_CLEAR_VALUE();
+                clearValue.Format = resourceDesc.Format;
+                clearValue.DepthStencil.Depth = 1.0f;
+                clearValue.DepthStencil.Stencil = 0xff;
+                
                 if (ci.Bind.HasFlag(GfxBindFlags.RenderTarget))
                     resourceDesc.Flags |= D3D12_RESOURCE_FLAGS.D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
                 if (ci.Bind.HasFlag(GfxBindFlags.DepthStencil))
@@ -78,7 +84,7 @@ namespace SimpleRHI.D3D12
                 fixed (D3D12MA_Allocation** alloc = &_allocation)
                 {
                     Guid guid = typeof(ID3D12Resource).GUID;
-                    Result r = new Result(allocator->CreateResource(&allocDesc, &resourceDesc, resourceState, null, alloc, &guid, &res).Value);
+                    Result r = new Result(allocator->CreateResource(&allocDesc, &resourceDesc, resourceState, (ci.Bind == GfxBindFlags.DepthStencil ? &clearValue : null), alloc, &guid, &res).Value);
 
                     if (r.Failure)
                     {

@@ -44,6 +44,7 @@ namespace SimpleRHI.D3D12
             return _srv;
         }
 
+        public GfxTexture Texture => _parent;
         public DescriptorHeapAllocation Descriptor => _srv;
     }
 }

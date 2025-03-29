@@ -2,8 +2,10 @@
   "profiles": {
     "SimpleEditor": {
       "commandName": "Project",
+      "commandLineArgs": "-r-vsync-allowed false",
       "workingDirectory": "D:\\source\\repos\\SimpleLib_Cs\\WorkingDir",
-      "nativeDebugging": false
+      "nativeDebugging": false,
+      "hotReloadEnabled": false
     }
   }
 }

@@ -1,7 +1,8 @@
 //workaround to editor shader package bug
 #define VARIANT_NULL
 
-#define BLEND_RT0 "StraightAlpha"
+#pragma BlendRT0 StraightAlpha
+#pragma ZCull Off
 
 struct VsInput
 {

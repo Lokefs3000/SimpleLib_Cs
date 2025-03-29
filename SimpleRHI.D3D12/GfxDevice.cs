@@ -72,7 +72,7 @@ namespace SimpleRHI.D3D12
                 if (factory == null && ci.ValidationEnabled)
                 {
                     ci.MessageLogger?.Warning("Validation layers not available!");
-                    r = DXGI.CreateDXGIFactory2(ci.ValidationEnabled, out factory);
+                    r = DXGI.CreateDXGIFactory2(false, out factory);
                 }
 
                 if (r.Failure || factory == null)
@@ -162,7 +162,7 @@ namespace SimpleRHI.D3D12
                     else
                     {
                         debug.SetEnableAutoName(true);
-                        debug.SetEnableGPUBasedValidation(true);
+                        //debug.SetEnableGPUBasedValidation(true); //Oh cool a memory leak. Uncomment this and watch the usage climb!
                     }
 
                     _debug.EnableDebugLayer();
@@ -463,6 +463,8 @@ namespace SimpleRHI.D3D12
             _cpuHeap_RTV.ReleaseStaleAllocations(nextFence);
             _gpuHeap_CBV_SRV_UAV.ReleaseStaleAllocations(nextFence);
 
+            _allocator->SetCurrentFrameIndex((uint)_frameIndex);
+
             for (int i = 0; i < _uploadHeaps.Count; i++)
             {
                 _uploadHeaps[i].FinishFrame(nextFence, nextFence + 1);
@@ -472,10 +474,13 @@ namespace SimpleRHI.D3D12
 
             _isFirstGraphicsCommandBuffer = false;
             _frameIndex = nextFence;
+
+            Thread.Sleep(100);
         }
 
         public void DumpInfoLog()
         {
+            //some kindof memory leak here
             if (_infoQueue != null)
             {
                 ulong num = _infoQueue.NumStoredMessages;

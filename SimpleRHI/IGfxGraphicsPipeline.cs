@@ -110,13 +110,13 @@
                 {
                     DepthEnable = false;
 
-                    DepthWriteMask = GfxDepthWriteMask.All;
-                    DepthFunction = GfxComparisonFunction.Less;
+                    DepthWriteMask = GfxDepthWriteMask.Zero;
+                    DepthFunction = GfxComparisonFunction.None;
 
                     StencilEnable = false;
 
-                    StencilReadMask = 0xff;
-                    StencilWriteMask = 0xff;
+                    StencilReadMask = 0x0;
+                    StencilWriteMask = 0x0;
 
                     FrontFace = new StencilOperationDesc();
                     BackFace = new StencilOperationDesc();
@@ -134,7 +134,7 @@
                         StencilFailOp = GfxStencilOperation.Keep;
                         StencilDepthFailOp = GfxStencilOperation.Keep;
                         StencilPassOp = GfxStencilOperation.Keep;
-                        StencilFunction = GfxComparisonFunction.Always;
+                        StencilFunction = GfxComparisonFunction.None;
                     }
                 }
             }

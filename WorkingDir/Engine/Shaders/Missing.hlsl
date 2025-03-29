@@ -1,5 +1,7 @@
 #define VARIANT_INSTANCING
 
+#pragma ZCull LessEqual
+
 #include "Include/Buffers.hlsl"
 
 struct VsInput
@@ -39,6 +41,14 @@ PsInput VertexMain(VsInput input, uint instance : SV_InstanceID)
 #endif
 
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
+float3 HSV2RGB(float3 input)
+{
+    float4 K = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 p = abs(frac(input.xxx + K.xyz) * 6.0 - K.www);
+
+    return input.z * lerp(K.xxx, clamp(p - K.xxx, 0.0, 1.0), input.y);
+}
+
 float4 PixelMain(PsInput input) : SV_Target0
 {
     CameraBufferData camera = CameraBuffer;
@@ -49,6 +59,6 @@ float4 PixelMain(PsInput input) : SV_Target0
     float isEven  = fmod(checker, 2.0) * 0.2 + 0.9;
 
     //return float4(float3(0.0, 0.7, 0.7) * isEven, 1.0);
-    return input.C / 512.0;
+    return float4(HSV2RGB(float3(input.C * 0.1, 1.0, 1.0)), 1.0);
 }
 #endif

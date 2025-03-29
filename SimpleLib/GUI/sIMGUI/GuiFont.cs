@@ -10,10 +10,13 @@ namespace SimpleLib.GUI.sIMGUI
 {
     internal class GuiFont
     {
-        private Dictionary<byte, GuiGlyph> _glyphs = new Dictionary<byte, GuiGlyph>();
+        private GuiGlyph[] _glyphs = Array.Empty<GuiGlyph>();
 
         public GuiFont(Stream source, Vector2 atlasDimensions)
         {
+            _glyphs = new GuiGlyph[byte.MaxValue];
+            Array.Fill(_glyphs, new GuiGlyph { });
+
             using (BinaryReader br = new BinaryReader(source, Encoding.UTF8, true))
             {
                 while (br.BaseStream.Position < br.BaseStream.Length)
@@ -47,7 +50,8 @@ namespace SimpleLib.GUI.sIMGUI
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryGetGlyph(byte glyph, out GuiGlyph data)
         {
-            return _glyphs.TryGetValue(glyph, out data);
+            data = _glyphs[glyph];
+            return true;
         }
     }
 

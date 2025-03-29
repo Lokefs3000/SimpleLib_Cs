@@ -34,7 +34,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Script\" />
-    <Folder Include="Threading\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SimpleRHI.D3D12\SimpleRHI.D3D12.csproj" />

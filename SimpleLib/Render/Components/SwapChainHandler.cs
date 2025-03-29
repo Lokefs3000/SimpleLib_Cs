@@ -1,4 +1,5 @@
 ﻿using SDL3;
+using SimpleLib.Runtime;
 using SimpleRHI;
 
 using static SDL3.SDL3;
@@ -14,10 +15,14 @@ namespace SimpleLib.Render.Components
         private IGfxDevice _device;
         private IGfxCommandQueue _immediate;
 
+        private readonly bool _vsyncAllowed;
+
         public SwapChainHandler(IGfxDevice device, IGfxCommandQueue immediate)
         {
             _device = device;
             _immediate = immediate;
+
+            _vsyncAllowed = CommandArguments.GetValueOrDefault("-r-vsync-allowed", true);
         }
 
         public void Dispose()
@@ -74,7 +79,7 @@ namespace SimpleLib.Render.Components
         {
             foreach (var kvp in _windows)
             {
-                kvp.Value.SwapChain?.Present(1u);
+                kvp.Value.SwapChain?.Present(_vsyncAllowed ? 1u : 0u);
             }
         }
 

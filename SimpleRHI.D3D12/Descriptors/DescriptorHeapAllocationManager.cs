@@ -25,7 +25,7 @@ namespace SimpleRHI.D3D12.Descriptors
         {
             _parentHeap = parentHeap;
             _device = device;
-            _allocator = (shaderVisible && false) ? new RingAllocator<uint>(size) : new DynamicGPUAllocator((uint)(size >= 512 ? 64 : 8), size);
+            _allocator = (shaderVisible) ? new RingAllocator<uint>(size) : new DynamicGPUAllocator((uint)(size >= 512 ? 64 : 8), size);
             _heap = device.D3D12Device.CreateDescriptorHeap(new DescriptorHeapDescription(type, size, shaderVisible ? DescriptorHeapFlags.ShaderVisible : DescriptorHeapFlags.None));
             _id = id;
             _descriptorSize = (ushort)device.D3D12Device.GetDescriptorHandleIncrementSize(type);

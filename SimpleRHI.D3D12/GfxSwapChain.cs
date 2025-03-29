@@ -44,7 +44,7 @@ namespace SimpleRHI.D3D12
                 Scaling = Scaling.None,
                 SwapEffect = SwapEffect.FlipSequential,
                 AlphaMode = AlphaMode.Unspecified,
-                Flags = SwapChainFlags.None
+                Flags = SwapChainFlags.AllowTearing
             };
 
             {
@@ -127,7 +127,7 @@ namespace SimpleRHI.D3D12
 
         public void Present(uint vsync)
         {
-            _swapChain.Present(vsync);
+            _swapChain.Present1(0u, PresentFlags.AllowTearing, new PresentParameters { }).CheckError();
             _bufferIndex = (int)_swapChain.CurrentBackBufferIndex;
 
             _rtv.Set(_descriptor.GetCPUHandle((uint)_bufferIndex), _descriptor.GetGPUHandle((uint)_bufferIndex));

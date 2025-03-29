@@ -171,7 +171,7 @@ namespace SimpleRHI.D3D12
                 rasterizer.DepthBias = 0;
                 rasterizer.DepthBiasClamp = 0.0f;
                 rasterizer.SlopeScaledDepthBias = 0.0f;
-                rasterizer.DepthClipEnable = false;
+                rasterizer.DepthClipEnable = true;
                 rasterizer.MultisampleEnable = false;
                 rasterizer.AntialiasedLineEnable = false;
                 rasterizer.ForcedSampleCount = 0;

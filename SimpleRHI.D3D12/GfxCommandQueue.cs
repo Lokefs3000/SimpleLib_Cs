@@ -67,7 +67,7 @@ namespace SimpleRHI.D3D12
 
         public ulong WaitForCompletion()
         {
-            ulong nextFence = _fence.CompletedValue + 1;
+            ulong nextFence = _frameIndex + 1;
             _commandQueue.Signal(_fence, nextFence);
 
             if (_fence.CompletedValue < nextFence)
@@ -77,6 +77,7 @@ namespace SimpleRHI.D3D12
                 _event.Reset();
             }
 
+            _frameIndex = nextFence;
             return nextFence;
         }
 

@@ -74,7 +74,7 @@ namespace SimpleRHI
 
         public struct DrawIndexedInstancedAttribs
         {
-            public uint BaseVertex;
+            public int BaseVertex;
             public uint IndexOffset;
             public uint InstanceOffset;
 

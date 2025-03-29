@@ -1,4 +1,5 @@
 ﻿using SimpleRHI;
+using System.Runtime.InteropServices;
 
 namespace SimpleLib.Resources.Data
 {
@@ -43,10 +44,6 @@ namespace SimpleLib.Resources.Data
 
         private IGfxGraphicsPipeline? CreateNewVariant(ulong variant)
         {
-            IGfxGraphicsPipeline.CreateInfo desc = new IGfxGraphicsPipeline.CreateInfo();
-            desc.VertexShaderBytecode = _storage.Package.GetShaderVariant(IShaderPackage.ShaderType.Vertex, Id, variant);
-            desc.PixelShaderBytecode = _storage.Package.GetShaderVariant(IShaderPackage.ShaderType.Pixel, Id, variant);
-
             IShaderPackage.ReflectionData? reflection = _storage.Package.LoadReflection(Id);
             if (reflection == null)
             {
@@ -54,15 +51,26 @@ namespace SimpleLib.Resources.Data
                 return null;
             }
 
+            IGfxGraphicsPipeline.CreateInfo desc = new IGfxGraphicsPipeline.CreateInfo();
+
+            //eww
+            unsafe
+            {
+                fixed (IGfxGraphicsPipeline.CreateInfo* ci = &reflection.CreateInfo)
+                {
+                    NativeMemory.Copy(ci, &desc, (nuint)sizeof(IGfxGraphicsPipeline.CreateInfo));
+                }
+            }
+
+            desc.VertexShaderBytecode = _storage.Package.GetShaderVariant(IShaderPackage.ShaderType.Vertex, Id, variant);
+            desc.PixelShaderBytecode = _storage.Package.GetShaderVariant(IShaderPackage.ShaderType.Pixel, Id, variant);
+
             InitializeCreateInfoResources(ref desc, reflection.VariantData[variant]);
 
             desc.Blend = (reflection.BlendDescriptions.Count == 0) ? [new IGfxGraphicsPipeline.CreateInfo.RenderTargetBlendDesc()] : reflection.BlendDescriptions.ToArray();
-            desc.Rasterizer = new IGfxGraphicsPipeline.CreateInfo.RasterizerDesc() { FillMode = GfxFillMode.Wireframe, CullMode = GfxCullMode.None };
-            desc.DepthStencil = new IGfxGraphicsPipeline.CreateInfo.DepthStencilDesc();
             desc.InputLayout = reflection.VariantData[variant].InputElements.ToArray();
-            desc.PrimitiveTopology = GfxPrimitiveTopologyType.Triangle;
-            desc.RTVFormats = [GfxFormat.R8G8B8A8_UNORM];
-            desc.DSVFormat = GfxFormat.Unkown;
+            desc.RTVFormats = [GfxFormat.R8G8B8A8_UNORM]; //will replace hardcoded values layer
+            desc.DSVFormat = GfxFormat.D24_UNORM_S8_UINT; //same here!
             desc.Name = $"{Id}_{variant}";
             desc.PipelineStateCache = _storage.Cache;
 
